@@ -2,7 +2,8 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, MoreHorizontal, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, MoreHorizontal, Eye, Building } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,32 +12,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import villaImg from "@assets/generated_images/modern_luxury_villa_exterior_with_pool.png";
-import aptImg from "@assets/generated_images/modern_apartment_interior_living_room.png";
+import { toast } from "sonner";
+
+const CURRENT_AGENT_ID = 1;
 
 export default function Properties() {
-  const myProperties = [
-    {
-      id: 1,
-      title: "Villa Paraiso with Infinity Pool",
-      location: "Marbella, Golden Mile",
-      price: 450,
-      status: "Active",
-      bookings: 3,
-      image: villaImg,
-      lastUpdated: "2 days ago"
+  const queryClient = useQueryClient();
+  
+  const { data: properties = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/agents/${CURRENT_AGENT_ID}/properties`],
+  });
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (propertyId: number) => {
+      const response = await fetch(`/api/properties/${propertyId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete property');
+      return response;
     },
-    {
-      id: 2,
-      title: "Downtown Modern Loft",
-      location: "Malaga Centro",
-      price: 180,
-      status: "Draft",
-      bookings: 0,
-      image: aptImg,
-      lastUpdated: "1 week ago"
-    }
-  ];
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/agents/${CURRENT_AGENT_ID}/properties`] });
+      toast.success('Property deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete property');
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="p-8">
+          <div className="text-center py-12">Loading properties...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -46,20 +58,24 @@ export default function Properties() {
             <h1 className="text-3xl font-serif font-bold text-primary">My Inventory</h1>
             <p className="text-muted-foreground mt-1">Manage your listings and availability.</p>
           </div>
-          <Button className="bg-secondary hover:bg-secondary/90 text-white">
+          <Button className="bg-secondary hover:bg-secondary/90 text-white" data-testid="button-add-property">
             <Plus className="mr-2 h-4 w-4" /> Add Property
           </Button>
         </div>
 
         <div className="space-y-4">
-          {myProperties.map((property) => (
-            <Card key={property.id} className="overflow-hidden hover:shadow-md transition-shadow">
+          {properties.map((property: any) => (
+            <Card key={property.id} className="overflow-hidden hover:shadow-md transition-shadow" data-testid={`card-property-${property.id}`}>
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row">
                   <div className="w-full md:w-64 h-48 md:h-auto relative">
-                    <img src={property.image} alt={property.title} className="object-cover w-full h-full" />
+                    <img 
+                      src={property.images?.[0] || '/placeholder.jpg'} 
+                      alt={property.title}
+                      className="object-cover w-full h-full" 
+                    />
                     <div className="absolute top-3 left-3">
-                      <Badge className={property.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-500'}>
+                      <Badge className={property.status === 'active' ? 'bg-emerald-500' : 'bg-slate-500'}>
                         {property.status}
                       </Badge>
                     </div>
@@ -69,12 +85,12 @@ export default function Properties() {
                     <div>
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-serif text-xl font-bold text-primary mb-1">{property.title}</h3>
+                          <h3 className="font-serif text-xl font-bold text-primary mb-1" data-testid={`text-title-${property.id}`}>{property.title}</h3>
                           <p className="text-muted-foreground text-sm">{property.location}</p>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-menu-${property.id}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -83,7 +99,12 @@ export default function Properties() {
                             <DropdownMenuItem><Eye className="mr-2 h-4 w-4" /> View Public Page</DropdownMenuItem>
                             <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit Listing</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => deletePropertyMutation.mutate(property.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -91,15 +112,19 @@ export default function Properties() {
                       <div className="flex gap-6 mt-4 text-sm">
                         <div>
                           <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Price</span>
-                          <span className="font-semibold">€{property.price}/night</span>
+                          <span className="font-semibold" data-testid={`text-price-${property.id}`}>€{property.price}/night</span>
                         </div>
                         <div>
-                          <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Bookings</span>
-                          <span className="font-semibold">{property.bookings} active</span>
+                          <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Type</span>
+                          <span className="font-semibold capitalize">{property.propertyType}</span>
                         </div>
                         <div>
-                          <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Last Updated</span>
-                          <span className="font-semibold">{property.lastUpdated}</span>
+                          <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Beds / Baths</span>
+                          <span className="font-semibold">{property.beds} / {property.baths}</span>
+                        </div>
+                        <div>
+                          <span className="block text-muted-foreground text-xs uppercase tracking-wider mb-0.5">Area</span>
+                          <span className="font-semibold">{property.sqm} m²</span>
                         </div>
                       </div>
                     </div>
@@ -113,6 +138,17 @@ export default function Properties() {
               </CardContent>
             </Card>
           ))}
+
+          {properties.length === 0 && (
+            <Card className="p-12 text-center">
+              <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-serif text-xl font-bold mb-2">No properties yet</h3>
+              <p className="text-muted-foreground mb-6">Start adding properties to your inventory to collaborate with other agents.</p>
+              <Button className="bg-secondary hover:bg-secondary/90 text-white">
+                <Plus className="mr-2 h-4 w-4" /> Add Your First Property
+              </Button>
+            </Card>
+          )}
         </div>
       </div>
     </Layout>

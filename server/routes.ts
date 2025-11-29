@@ -20,8 +20,13 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-// Admin password (in production, use env variable)
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+// Admin password - REQUIRED for security
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+// Log warning if ADMIN_PASSWORD is not set
+if (!ADMIN_PASSWORD) {
+  console.error('WARNING: ADMIN_PASSWORD environment variable is not set. Admin panel will be inaccessible.');
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -223,6 +228,12 @@ export async function registerRoutes(
   
   // Admin login
   app.post("/api/admin/login", (req, res) => {
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({ 
+        success: false, 
+        message: "Admin panel is not configured. Please set ADMIN_PASSWORD environment variable." 
+      });
+    }
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
       req.session.isAdmin = true;

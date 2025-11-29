@@ -10,15 +10,22 @@ const httpServer = createServer(app);
 const MemoryStoreSession = MemoryStore(session);
 
 // Session middleware for admin authentication
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && process.env.NODE_ENV === 'production') {
+  console.error('WARNING: SESSION_SECRET environment variable is not set. This is a security risk in production.');
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'rentnetagents-admin-secret-key',
+  secret: sessionSecret || 'dev-only-session-secret-do-not-use-in-production',
   resave: false,
   saveUninitialized: false,
   store: new MemoryStoreSession({
     checkPeriod: 86400000, // 24 hours
   }),
   cookie: {
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   }
 }));

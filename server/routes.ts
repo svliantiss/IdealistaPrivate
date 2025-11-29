@@ -1,8 +1,27 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertBookingSchema, insertCommissionSchema } from "@shared/schema";
+import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+
+// Extend session type for admin authentication
+declare module 'express-session' {
+  interface SessionData {
+    isAdmin?: boolean;
+  }
+}
+
+// Admin authentication middleware
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (req.session.isAdmin) {
+    next();
+  } else {
+    res.status(401).json({ message: "Unauthorized - Admin login required" });
+  }
+};
+
+// Admin password (in production, use env variable)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -196,6 +215,75 @@ export async function registerRoutes(
       res.json(commissions);
     } catch (error) {
       console.error("Error fetching commissions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== ADMIN ROUTES =====
+  
+  // Admin login
+  app.post("/api/admin/login", (req, res) => {
+    const { password } = req.body;
+    if (password === ADMIN_PASSWORD) {
+      req.session.isAdmin = true;
+      res.json({ success: true, message: "Login successful" });
+    } else {
+      res.status(401).json({ success: false, message: "Invalid password" });
+    }
+  });
+
+  // Admin logout
+  app.post("/api/admin/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ message: "Error logging out" });
+      } else {
+        res.json({ success: true, message: "Logged out successfully" });
+      }
+    });
+  });
+
+  // Check admin status
+  app.get("/api/admin/status", (req, res) => {
+    res.json({ isAdmin: req.session.isAdmin || false });
+  });
+
+  // Get all agents (admin only)
+  app.get("/api/admin/agents", requireAdmin, async (req, res) => {
+    try {
+      const agents = await storage.getAllAgents();
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create new agent (admin only)
+  app.post("/api/admin/agents", requireAdmin, async (req, res) => {
+    try {
+      const result = insertAgentSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(result.error).toString() 
+        });
+      }
+      const agent = await storage.createAgent(result.data);
+      res.status(201).json(agent);
+    } catch (error) {
+      console.error("Error creating agent:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete agent (admin only)
+  app.delete("/api/admin/agents/:id", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteAgent(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting agent:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

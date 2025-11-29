@@ -8,6 +8,8 @@ import Dashboard from "@/pages/Dashboard";
 import Search from "@/pages/Search";
 import Properties from "@/pages/Properties";
 import Bookings from "@/pages/Bookings";
+import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
 
 function Router() {
   return (
@@ -16,6 +18,8 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/properties" component={Properties} />
       <Route path="/bookings" component={Bookings} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/admin/login" component={AdminLogin} />
       <Route component={NotFound} />
     </Switch>
   );

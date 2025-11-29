@@ -2,9 +2,26 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import session from "express-session";
+import MemoryStore from "memorystore";
 
 const app = express();
 const httpServer = createServer(app);
+const MemoryStoreSession = MemoryStore(session);
+
+// Session middleware for admin authentication
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'rentnetagents-admin-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  store: new MemoryStoreSession({
+    checkPeriod: 86400000, // 24 hours
+  }),
+  cookie: {
+    secure: false,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  }
+}));
 
 declare module "http" {
   interface IncomingMessage {

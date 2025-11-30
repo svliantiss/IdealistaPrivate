@@ -68,9 +68,11 @@ export default function SalesCommissions() {
   };
 
   const filteredCommissions = filterCommissionsByDate(salesCommissions);
-  const totalCommissions = filteredCommissions.reduce((sum: number, c: any) => 
-    sum + parseFloat(c.sellerCommission || 0) + parseFloat(c.buyerCommission || 0), 0
-  );
+  const totalCommissions = filteredCommissions.reduce((sum: number, c: any) => {
+    const isSeller = c.sellerAgentId === CURRENT_AGENT_ID;
+    const yourCommission = isSeller ? parseFloat(c.sellerCommission || 0) : parseFloat(c.buyerCommission || 0);
+    return sum + yourCommission;
+  }, 0);
   const totalPlatformFee = filteredCommissions.reduce((sum: number, c: any) => 
     sum + parseFloat(c.platformFee || 0), 0
   );
@@ -129,23 +131,17 @@ export default function SalesCommissions() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white border border-border rounded-lg p-6">
-            <p className="text-sm text-muted-foreground mb-1">Total Commissions</p>
-            <p className="text-2xl font-bold text-primary" data-testid="text-total-commissions">
+            <p className="text-sm text-muted-foreground mb-1">Your Total Commissions</p>
+            <p className="text-2xl font-bold text-emerald-600" data-testid="text-total-commissions">
               €{totalCommissions.toFixed(2)}
             </p>
           </div>
           <div className="bg-white border border-border rounded-lg p-6">
-            <p className="text-sm text-muted-foreground mb-1">Platform Fees</p>
+            <p className="text-sm text-muted-foreground mb-1">Platform Fees Paid</p>
             <p className="text-2xl font-bold text-amber-600" data-testid="text-total-fees">
               €{totalPlatformFee.toFixed(2)}
-            </p>
-          </div>
-          <div className="bg-white border border-border rounded-lg p-6">
-            <p className="text-sm text-muted-foreground mb-1">Your Net Earnings</p>
-            <p className="text-2xl font-bold text-emerald-600" data-testid="text-net-earnings">
-              €{(totalCommissions - totalPlatformFee).toFixed(2)}
             </p>
           </div>
         </div>

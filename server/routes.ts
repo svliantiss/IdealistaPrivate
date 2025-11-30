@@ -405,11 +405,12 @@ export async function registerRoutes(
       const transaction = await storage.createSalesTransaction(result.data);
       
       // Auto-create sales commission record
-      // Commission is 4% of sale price split between agents: 2% seller, 2% buyer
+      // Commission is 4% of sale price: 2% to seller agent, 2% to buyer agent
+      // Platform fee is 1% of sale price
       const totalAmount = parseFloat(transaction.salePrice);
       const sellerCommission = totalAmount * 0.02; // 2% to seller agent
       const buyerCommission = totalAmount * 0.02;  // 2% to buyer agent
-      const platformFee = 0; // Platform takes no additional fee
+      const platformFee = totalAmount * 0.01; // 1% platform fee
       
       await storage.createSalesCommission({
         transactionId: transaction.id,

@@ -52,9 +52,11 @@ export default function EmployeeDetail() {
 
   const activeRentals = properties.filter((p: any) => p.status === 'active');
   const activeSales = salesProperties.filter((p: any) => p.status !== 'sold');
-  const totalCommission = commissions.reduce((sum: number, c: any) => 
-    sum + parseFloat(c.ownerCommission || 0) + parseFloat(c.bookingCommission || 0), 0
-  );
+  const totalCommission = commissions.reduce((sum: number, c: any) => {
+    const isOwner = c.ownerAgentId === agentId;
+    const yourCommission = isOwner ? parseFloat(c.ownerCommission || 0) : parseFloat(c.bookingCommission || 0);
+    return sum + yourCommission;
+  }, 0);
   const totalSalesCommission = salesCommissions.reduce((sum: number, c: any) => {
     const isSeller = c.sellerAgentId === agentId;
     const yourCommission = isSeller ? parseFloat(c.sellerCommission || 0) : parseFloat(c.buyerCommission || 0);

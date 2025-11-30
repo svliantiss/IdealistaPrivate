@@ -470,9 +470,11 @@ export async function registerRoutes(
         const commissions = await storage.getCommissionsByAgent(emp.id);
         const salesCommissions = await storage.getSalesCommissionsByAgent(emp.id);
         
-        const totalCommission = commissions.reduce((sum: number, c: any) => 
-          sum + parseFloat(c.ownerCommission || 0) + parseFloat(c.bookingCommission || 0), 0
-        );
+        const totalCommission = commissions.reduce((sum: number, c: any) => {
+          const isOwner = c.ownerAgentId === emp.id;
+          const yourCommission = isOwner ? parseFloat(c.ownerCommission || 0) : parseFloat(c.bookingCommission || 0);
+          return sum + yourCommission;
+        }, 0);
         const totalSalesCommission = salesCommissions.reduce((sum: number, c: any) => {
           const isSeller = c.sellerAgentId === emp.id;
           const yourCommission = isSeller ? parseFloat(c.sellerCommission || 0) : parseFloat(c.buyerCommission || 0);

@@ -68,9 +68,11 @@ export default function Dashboard() {
   const activeListings = properties.filter((p: any) => p.status === 'active').length + salesProperties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
   const soldHouses = salesProperties.filter((p: any) => p.status === 'sold').length;
-  const totalCommission = commissions.reduce((sum: number, c: any) => 
-    sum + parseFloat(c.ownerCommission || 0) + parseFloat(c.bookingCommission || 0), 0
-  );
+  const totalCommission = commissions.reduce((sum: number, c: any) => {
+    const isOwner = c.ownerAgentId === CURRENT_AGENT_ID;
+    const yourCommission = isOwner ? parseFloat(c.ownerCommission || 0) : parseFloat(c.bookingCommission || 0);
+    return sum + yourCommission;
+  }, 0);
   const totalSalesCommission = allSalesCommissions.reduce((sum: number, c: any) => {
     const isSeller = c.sellerAgentId === CURRENT_AGENT_ID;
     const yourCommission = isSeller ? parseFloat(c.sellerCommission || 0) : parseFloat(c.buyerCommission || 0);

@@ -8,10 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreHorizontal, Users } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
 
 const CURRENT_AGENT_ID = 1;
 
@@ -47,12 +46,6 @@ export default function Bookings() {
             <h1 className="text-3xl font-serif font-bold text-primary">Bookings</h1>
             <p className="text-muted-foreground mt-1">Track reservations and commissions.</p>
           </div>
-          <Link href="/employee-stats">
-            <Button className="bg-sidebar text-white hover:bg-sidebar/90 gap-2" data-testid="button-employee-stats">
-              <Users className="h-4 w-4" />
-              Team Stats
-            </Button>
-          </Link>
         </div>
 
         <div className="bg-white rounded-lg border border-border shadow-sm overflow-hidden">

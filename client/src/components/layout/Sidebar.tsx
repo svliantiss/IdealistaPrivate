@@ -6,6 +6,7 @@ import {
   Building2, 
   CalendarDays, 
   Home,
+  Users,
   LogOut 
 } from "lucide-react";
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
@@ -19,6 +20,7 @@ export function Sidebar() {
     { icon: Building2, label: "My Rentals", href: "/properties" },
     { icon: Home, label: "Sales", href: "/sales" },
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
+    { icon: Users, label: "Team Stats", href: "/employee-stats" },
   ];
 
   return (

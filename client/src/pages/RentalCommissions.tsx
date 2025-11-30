@@ -50,6 +50,19 @@ export default function RentalCommissions() {
     }
   };
 
+  const getBooking = (bookingId: number) => {
+    return bookings.find((b: any) => b.id === bookingId);
+  };
+
+  const calculateDaysBooked = (bookingId: number) => {
+    const booking = getBooking(bookingId);
+    if (!booking) return 0;
+    const checkIn = new Date(booking.checkIn);
+    const checkOut = new Date(booking.checkOut);
+    const days = Math.floor((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, days);
+  };
+
   const filterCommissionsByDate = (commissions: any[]) => {
     if (dateFilter === 'all') return commissions;
     
@@ -78,17 +91,25 @@ export default function RentalCommissions() {
   );
 
   const downloadCSV = () => {
-    const headers = ['Commission ID', 'Booking ID', 'Property', 'Owner Commission', 'Booking Commission', 'Platform Fee', 'Status', 'Date'];
-    const rows = filteredCommissions.map((c: any) => [
-      c.id,
-      c.bookingId,
-      getPropertyTitle(c.bookingId),
-      parseFloat(c.ownerCommission || 0).toFixed(2),
-      parseFloat(c.bookingCommission || 0).toFixed(2),
-      parseFloat(c.platformFee || 0).toFixed(2),
-      c.status,
-      new Date(c.createdAt).toLocaleDateString()
-    ]);
+    const headers = ['Commission ID', 'Booking ID', 'Property', 'Owner Commission', 'Booking Commission', 'Platform Fee', 'Status', 'Check-In Date', 'Check-Out Date', 'Total Days Booked'];
+    const rows = filteredCommissions.map((c: any) => {
+      const booking = getBooking(c.bookingId);
+      const checkInDate = booking ? new Date(booking.checkIn).toLocaleDateString() : 'N/A';
+      const checkOutDate = booking ? new Date(booking.checkOut).toLocaleDateString() : 'N/A';
+      const days = calculateDaysBooked(c.bookingId);
+      return [
+        c.id,
+        c.bookingId,
+        getPropertyTitle(c.bookingId),
+        parseFloat(c.ownerCommission || 0).toFixed(2),
+        parseFloat(c.bookingCommission || 0).toFixed(2),
+        parseFloat(c.platformFee || 0).toFixed(2),
+        c.status,
+        checkInDate,
+        checkOutDate,
+        days
+      ];
+    });
 
     const csvContent = [
       headers.join(','),
@@ -191,7 +212,9 @@ export default function RentalCommissions() {
                 <TableHead className="text-right font-semibold">Other Commission</TableHead>
                 <TableHead className="text-right font-semibold">Platform Fee</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold">Date</TableHead>
+                <TableHead className="font-semibold">Check-In</TableHead>
+                <TableHead className="font-semibold">Check-Out</TableHead>
+                <TableHead className="font-semibold text-right">Total Days</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -236,8 +259,18 @@ export default function RentalCommissions() {
                         {commission.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(commission.createdAt).toLocaleDateString()}
+                    <TableCell className="text-sm" data-testid={`text-checkin-${commission.id}`}>
+                      {getBooking(commission.bookingId) ? 
+                        new Date(getBooking(commission.bookingId)!.checkIn).toLocaleDateString() 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm" data-testid={`text-checkout-${commission.id}`}>
+                      {getBooking(commission.bookingId) ? 
+                        new Date(getBooking(commission.bookingId)!.checkOut).toLocaleDateString() 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium" data-testid={`text-days-${commission.id}`}>
+                      {calculateDaysBooked(commission.bookingId)} days
                     </TableCell>
                   </TableRow>
                 );

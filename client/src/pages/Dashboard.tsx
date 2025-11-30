@@ -1,6 +1,7 @@
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { 
   ArrowUpRight, 
@@ -10,11 +11,30 @@ import {
   Clock,
   Plus,
   Search,
-  Home
+  Home,
+  Sparkles,
+  MapPin,
+  Bed,
+  Bath,
+  Maximize2
 } from "lucide-react";
 import { Link } from "wouter";
 
 const CURRENT_AGENT_ID = 1;
+
+const getPropertyOfTheDay = (properties: any[]): any => {
+  if (!properties || properties.length === 0) return null;
+  
+  // Use day of year to determine which property to show
+  const today = new Date();
+  const startOfYear = new Date(today.getFullYear(), 0, 0);
+  const diff = today.getTime() - startOfYear.getTime();
+  const dayOfYear = Math.floor(diff / (24 * 60 * 60 * 1000));
+  
+  // Use modulo to cycle through properties
+  const index = dayOfYear % properties.length;
+  return properties[index];
+};
 
 export default function Dashboard() {
   const { data: properties = [] } = useQuery<any[]>({
@@ -36,6 +56,14 @@ export default function Dashboard() {
   const { data: allSalesCommissions = [] } = useQuery<any[]>({
     queryKey: [`/api/sales-commissions/agent/${CURRENT_AGENT_ID}`],
   });
+
+  // Fetch all properties for "Property of the Day"
+  const { data: allProperties = [] } = useQuery<any[]>({
+    queryKey: [`/api/sales-properties`],
+  });
+
+  const allListings = [...properties, ...allProperties];
+  const propertyOfTheDay = getPropertyOfTheDay(allListings);
 
   const activeListings = properties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
@@ -92,7 +120,63 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <Card className="col-span-2 shadow-sm border-border/50 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800 overflow-hidden">
+            <div className="relative">
+              {propertyOfTheDay?.images?.[0] && (
+                <img 
+                  src={propertyOfTheDay.images[0]} 
+                  alt={propertyOfTheDay.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                  data-testid="img-property-of-day"
+                />
+              )}
+              <div className="absolute top-3 left-3">
+                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-0 gap-1" data-testid="badge-property-of-day">
+                  <Sparkles className="h-3 w-3" />
+                  Property of the Day
+                </Badge>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="font-serif text-xl" data-testid="text-property-title">{propertyOfTheDay?.title || 'Loading...'}</CardTitle>
+              <CardDescription className="flex items-center gap-1 text-sm" data-testid="text-property-location">
+                <MapPin className="h-4 w-4" />
+                {propertyOfTheDay?.location}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground line-clamp-2">{propertyOfTheDay?.description}</p>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Bed className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium" data-testid="text-beds">{propertyOfTheDay?.beds}</p>
+                  <p className="text-xs text-muted-foreground">Beds</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Bath className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium" data-testid="text-baths">{propertyOfTheDay?.baths}</p>
+                  <p className="text-xs text-muted-foreground">Baths</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Maximize2 className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium" data-testid="text-sqm">{propertyOfTheDay?.sqm}</p>
+                  <p className="text-xs text-muted-foreground">m²</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-blue-600 mb-1" data-testid="text-property-price">€{parseFloat(propertyOfTheDay?.price || 0).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{propertyOfTheDay?.price > 10000 ? 'Sale' : 'Night'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="col-span-2 shadow-sm border-border/50">
             <CardHeader>
               <CardTitle className="font-serif">Recent Bookings</CardTitle>

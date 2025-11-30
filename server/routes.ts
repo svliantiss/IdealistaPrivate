@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema } from "@shared/schema";
+import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
 // Extend session type for admin authentication
@@ -295,6 +295,168 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting agent:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== SALES PROPERTY ROUTES =====
+  app.get("/api/sales-properties", async (req, res) => {
+    try {
+      const { location, propertyType, minPrice, maxPrice, status } = req.query;
+      const properties = await storage.getAllSalesProperties({
+        location: location as string,
+        propertyType: propertyType as string,
+        minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+        maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+        status: (status as string) || "active",
+      });
+      res.json(properties);
+    } catch (error) {
+      console.error("Error fetching sales properties:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/sales-properties/:id", async (req, res) => {
+    try {
+      const property = await storage.getSalesProperty(parseInt(req.params.id));
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      res.json(property);
+    } catch (error) {
+      console.error("Error fetching sales property:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/agents/:agentId/sales-properties", async (req, res) => {
+    try {
+      const properties = await storage.getSalesPropertiesByAgent(parseInt(req.params.agentId));
+      res.json(properties);
+    } catch (error) {
+      console.error("Error fetching agent sales properties:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sales-properties", async (req, res) => {
+    try {
+      const result = insertSalesPropertySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(result.error).toString() 
+        });
+      }
+      const property = await storage.createSalesProperty(result.data);
+      res.status(201).json(property);
+    } catch (error) {
+      console.error("Error creating sales property:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/sales-properties/:id", async (req, res) => {
+    try {
+      const property = await storage.updateSalesProperty(parseInt(req.params.id), req.body);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      res.json(property);
+    } catch (error) {
+      console.error("Error updating sales property:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/sales-properties/:id", async (req, res) => {
+    try {
+      await storage.deleteSalesProperty(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting sales property:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== SALES TRANSACTION ROUTES =====
+  app.get("/api/sales-transactions", async (req, res) => {
+    try {
+      const { agentId } = req.query;
+      let transactions: any[] = [];
+      if (agentId) {
+        transactions = await storage.getSalesTransactionsByAgent(parseInt(agentId as string));
+      }
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching sales transactions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sales-transactions", async (req, res) => {
+    try {
+      const result = insertSalesTransactionSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(result.error).toString() 
+        });
+      }
+      const transaction = await storage.createSalesTransaction(result.data);
+      
+      // Auto-create sales commission record (4% rate, 2% each to seller and buyer agents)
+      const commissionRate = 4;
+      const totalAmount = parseFloat(transaction.salePrice);
+      const platformFee = totalAmount * 0.01; // 1% platform fee
+      const totalCommission = totalAmount * (commissionRate / 100);
+      const sellerCommission = totalCommission * 0.5;
+      const buyerCommission = totalCommission * 0.5;
+      
+      await storage.createSalesCommission({
+        transactionId: transaction.id,
+        sellerAgentId: transaction.sellerAgentId,
+        buyerAgentId: transaction.buyerAgentId,
+        totalAmount: transaction.salePrice,
+        sellerCommission: sellerCommission.toFixed(2),
+        buyerCommission: buyerCommission.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        commissionRate: commissionRate.toFixed(2),
+        status: "pending",
+      });
+      
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating sales transaction:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/sales-transactions/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      const transaction = await storage.updateSalesTransactionStatus(parseInt(req.params.id), status);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error updating sales transaction status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== SALES COMMISSION ROUTES =====
+  app.get("/api/sales-commissions/agent/:agentId", async (req, res) => {
+    try {
+      const commissions = await storage.getSalesCommissionsByAgent(parseInt(req.params.agentId));
+      res.json(commissions);
+    } catch (error) {
+      console.error("Error fetching sales commissions:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

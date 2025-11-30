@@ -7,10 +7,19 @@ import {
   type InsertBooking,
   type Commission,
   type InsertCommission,
+  type SalesProperty,
+  type InsertSalesProperty,
+  type SalesTransaction,
+  type InsertSalesTransaction,
+  type SalesCommission,
+  type InsertSalesCommission,
   agents,
   properties,
   bookings,
-  commissions
+  commissions,
+  salesProperties,
+  salesTransactions,
+  salesCommissions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or } from "drizzle-orm";
@@ -49,6 +58,30 @@ export interface IStorage {
   getCommissionByBooking(bookingId: number): Promise<Commission | undefined>;
   getCommissionsByAgent(agentId: number): Promise<Commission[]>;
   createCommission(commission: InsertCommission): Promise<Commission>;
+
+  // Sales Property methods
+  getSalesProperty(id: number): Promise<SalesProperty | undefined>;
+  getSalesPropertiesByAgent(agentId: number): Promise<SalesProperty[]>;
+  getAllSalesProperties(filters?: {
+    location?: string;
+    propertyType?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    status?: string;
+  }): Promise<SalesProperty[]>;
+  createSalesProperty(property: InsertSalesProperty): Promise<SalesProperty>;
+  updateSalesProperty(id: number, property: Partial<InsertSalesProperty>): Promise<SalesProperty | undefined>;
+  deleteSalesProperty(id: number): Promise<void>;
+
+  // Sales Transaction methods
+  getSalesTransaction(id: number): Promise<SalesTransaction | undefined>;
+  getSalesTransactionsByAgent(agentId: number): Promise<SalesTransaction[]>;
+  createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction>;
+  updateSalesTransactionStatus(id: number, status: string): Promise<SalesTransaction | undefined>;
+
+  // Sales Commission methods
+  getSalesCommissionsByAgent(agentId: number): Promise<SalesCommission[]>;
+  createSalesCommission(commission: InsertSalesCommission): Promise<SalesCommission>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -193,6 +226,105 @@ export class DatabaseStorage implements IStorage {
   async createCommission(commission: InsertCommission): Promise<Commission> {
     const [newCommission] = await db.insert(commissions).values(commission).returning();
     return newCommission;
+  }
+
+  // Sales Property methods
+  async getSalesProperty(id: number): Promise<SalesProperty | undefined> {
+    const [property] = await db.select().from(salesProperties).where(eq(salesProperties.id, id));
+    return property || undefined;
+  }
+
+  async getSalesPropertiesByAgent(agentId: number): Promise<SalesProperty[]> {
+    return await db.select().from(salesProperties).where(eq(salesProperties.agentId, agentId));
+  }
+
+  async getAllSalesProperties(filters?: {
+    location?: string;
+    propertyType?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    status?: string;
+  }): Promise<SalesProperty[]> {
+    let query = db.select().from(salesProperties);
+    const conditions = [];
+    
+    if (filters?.location) {
+      conditions.push(ilike(salesProperties.location, `%${filters.location}%`));
+    }
+    if (filters?.propertyType) {
+      conditions.push(eq(salesProperties.propertyType, filters.propertyType));
+    }
+    if (filters?.status) {
+      conditions.push(eq(salesProperties.status, filters.status));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query;
+  }
+
+  async createSalesProperty(property: InsertSalesProperty): Promise<SalesProperty> {
+    const [newProperty] = await db.insert(salesProperties).values(property).returning();
+    return newProperty;
+  }
+
+  async updateSalesProperty(id: number, property: Partial<InsertSalesProperty>): Promise<SalesProperty | undefined> {
+    const [updated] = await db
+      .update(salesProperties)
+      .set({ ...property, updatedAt: new Date() })
+      .where(eq(salesProperties.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteSalesProperty(id: number): Promise<void> {
+    await db.delete(salesProperties).where(eq(salesProperties.id, id));
+  }
+
+  // Sales Transaction methods
+  async getSalesTransaction(id: number): Promise<SalesTransaction | undefined> {
+    const [transaction] = await db.select().from(salesTransactions).where(eq(salesTransactions.id, id));
+    return transaction || undefined;
+  }
+
+  async getSalesTransactionsByAgent(agentId: number): Promise<SalesTransaction[]> {
+    return await db.select().from(salesTransactions).where(
+      or(
+        eq(salesTransactions.sellerAgentId, agentId),
+        eq(salesTransactions.buyerAgentId, agentId)
+      )
+    );
+  }
+
+  async createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction> {
+    const [result] = await db.insert(salesTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async updateSalesTransactionStatus(id: number, status: string): Promise<SalesTransaction | undefined> {
+    const [updated] = await db
+      .update(salesTransactions)
+      .set({ status })
+      .where(eq(salesTransactions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Sales Commission methods
+  async getSalesCommissionsByAgent(agentId: number): Promise<SalesCommission[]> {
+    return await db.select().from(salesCommissions).where(
+      or(
+        eq(salesCommissions.sellerAgentId, agentId),
+        eq(salesCommissions.buyerAgentId, agentId)
+      )
+    );
+  }
+
+  async createSalesCommission(commission: InsertSalesCommission): Promise<SalesCommission> {
+    const [result] = await db.insert(salesCommissions).values(commission).returning();
+    return result;
   }
 }
 

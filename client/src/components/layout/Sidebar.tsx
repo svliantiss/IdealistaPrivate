@@ -5,8 +5,7 @@ import {
   Search, 
   Building2, 
   CalendarDays, 
-  MessageSquare, 
-  Settings, 
+  Home,
   LogOut 
 } from "lucide-react";
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
@@ -16,10 +15,10 @@ export function Sidebar() {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: Search, label: "Find Properties", href: "/search" },
-    { icon: Building2, label: "My Inventory", href: "/properties" },
+    { icon: Search, label: "Find Rentals", href: "/search" },
+    { icon: Building2, label: "My Rentals", href: "/properties" },
+    { icon: Home, label: "Sales", href: "/sales" },
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
-    { icon: MessageSquare, label: "Messages", href: "/messages" },
   ];
 
   return (

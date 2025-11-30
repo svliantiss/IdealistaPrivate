@@ -2,7 +2,16 @@
 
 ## Overview
 
-RentNetAgents is a private professional network designed for real estate agents to collaborate on short-term rental properties. The platform enables agents to list properties, search inventory from other agents, manage bookings, and share commissions. This is a B2B platform inspired by Idealista but focused on agent-to-agent collaboration rather than direct consumer access.
+RentNetAgents is a private professional network designed for real estate agents to collaborate on both rental and sales properties. The platform enables agents to list properties (rentals and sales), search inventory from other agents, manage bookings/transactions, track commissions, and includes an admin panel for user management. This is a B2B platform inspired by Idealista but focused on agent-to-agent collaboration rather than direct consumer access.
+
+## Recent Changes (Session: Added Admin Panel & Sales Features)
+
+- **Admin Authentication System**: Added secure admin login with password protection (ADMIN_PASSWORD env var)
+- **Admin Panel**: New page at `/admin` for managing agents (add/delete users)
+- **Sales Properties System**: Expanded platform to support property sales in addition to rentals
+- **Sales Transactions & Commissions**: Separate commission structure for sales (4% vs 10% for rentals, 1% platform fee vs 5%)
+- **Sales Page**: New frontend page at `/sales` for browsing and managing sales properties
+- **Navigation Updates**: Sidebar now includes Sales link, rebranded rental section as "Find Rentals" and "My Rentals"
 
 ## User Preferences
 
@@ -44,7 +53,7 @@ Preferred communication style: Simple, everyday language.
 The codebase follows a monorepo-style structure with three main directories:
 
 - **`client/`** - React frontend application
-  - `client/src/pages/` - Page components (Dashboard, Search, Properties, Bookings, Admin)
+  - `client/src/pages/` - Page components (Dashboard, Search, Properties, Bookings, Sales, Admin, AdminLogin)
   - `client/src/components/` - Reusable UI components (layout, shadcn components)
   - `client/src/lib/` - Utilities and query client configuration
   - `client/index.html` - HTML entry point with SEO meta tags
@@ -61,7 +70,7 @@ The codebase follows a monorepo-style structure with three main directories:
 
 ### Data Model
 
-The application uses four core entities:
+The application uses nine core entities (four for rentals, four for sales, one for agents):
 
 **Agents** - Real estate professionals using the platform
 - Identity: id, name, email (unique), agency affiliation, phone
@@ -79,9 +88,27 @@ The application uses four core entities:
 - Dates: checkIn, checkOut
 - Financial: totalPrice, status (pending/confirmed/cancelled)
 
-**Commissions** - Revenue sharing records
+**Commissions** - Revenue sharing records for rentals
 - References: bookingId (one-to-one relationship)
-- Splits: ownerCommission, bookingCommission, platformFee
+- Splits: ownerCommission, bookingCommission, platformFee (10% total commission, 5% platform fee)
+- Metadata: status, created timestamp
+
+**Sales Properties** - Property listings for sale
+- Structure mirrors Properties but for sales transactions
+- Ownership: Linked to agent via agentId foreign key
+- Details: title, description, location, type, price (listing price), beds, baths, square meters
+- Media: images array, amenities array
+- Metadata: status (draft/active/inactive/sold), license number, timestamps
+
+**Sales Transactions** - Property sales completed or pending
+- References: propertyId, sellerAgentId, buyerAgentId
+- Buyer info: name, email, phone
+- Financial: salePrice, saleDate
+- Status: pending, completed, cancelled
+
+**Sales Commissions** - Revenue sharing for property sales
+- References: transactionId (one-to-one relationship)
+- Splits: sellerCommission, buyerCommission, platformFee (4% total commission, 1% platform fee)
 - Metadata: status, created timestamp
 
 ### Key Architectural Decisions

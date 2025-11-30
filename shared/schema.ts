@@ -89,3 +89,75 @@ export const insertCommissionSchema = createInsertSchema(commissions).omit({
 });
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
 export type Commission = typeof commissions.$inferSelect;
+
+// Sales Properties Table (For Sale listings)
+export const salesProperties = pgTable("sales_properties", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => agents.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  location: text("location").notNull(),
+  propertyType: text("property_type").notNull(), // villa, apartment, studio, townhouse, etc.
+  price: decimal("price", { precision: 12, scale: 2 }).notNull(), // sale price
+  beds: integer("beds").notNull(),
+  baths: integer("baths").notNull(),
+  sqm: integer("sqm").notNull(),
+  amenities: text("amenities").array().notNull().default(sql`ARRAY[]::text[]`),
+  images: text("images").array().notNull().default(sql`ARRAY[]::text[]`),
+  status: text("status").notNull().default("draft"), // draft, active, inactive, sold
+  licenseNumber: text("license_number"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSalesPropertySchema = createInsertSchema(salesProperties).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertSalesProperty = z.infer<typeof insertSalesPropertySchema>;
+export type SalesProperty = typeof salesProperties.$inferSelect;
+
+// Sales Transactions Table
+export const salesTransactions = pgTable("sales_transactions", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull().references(() => salesProperties.id),
+  sellerAgentId: integer("seller_agent_id").notNull().references(() => agents.id),
+  buyerAgentId: integer("buyer_agent_id").notNull().references(() => agents.id),
+  buyerName: text("buyer_name").notNull(),
+  buyerEmail: text("buyer_email").notNull(),
+  buyerPhone: text("buyer_phone"),
+  salePrice: decimal("sale_price", { precision: 12, scale: 2 }).notNull(),
+  saleDate: timestamp("sale_date").notNull(),
+  status: text("status").notNull().default("pending"), // pending, completed, cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSalesTransactionSchema = createInsertSchema(salesTransactions).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertSalesTransaction = z.infer<typeof insertSalesTransactionSchema>;
+export type SalesTransaction = typeof salesTransactions.$inferSelect;
+
+// Sales Commissions Table
+export const salesCommissions = pgTable("sales_commissions", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id").notNull().references(() => salesTransactions.id),
+  sellerAgentId: integer("seller_agent_id").notNull().references(() => agents.id),
+  buyerAgentId: integer("buyer_agent_id").notNull().references(() => agents.id),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  sellerCommission: decimal("seller_commission", { precision: 12, scale: 2 }).notNull(),
+  buyerCommission: decimal("buyer_commission", { precision: 12, scale: 2 }).notNull(),
+  platformFee: decimal("platform_fee", { precision: 12, scale: 2 }).notNull(),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull().default("4.00"), // percentage
+  status: text("status").notNull().default("pending"), // pending, paid
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSalesCommissionSchema = createInsertSchema(salesCommissions).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertSalesCommission = z.infer<typeof insertSalesCommissionSchema>;
+export type SalesCommission = typeof salesCommissions.$inferSelect;

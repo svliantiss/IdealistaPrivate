@@ -50,6 +50,22 @@ export default function SalesCommissions() {
     }
   };
 
+  const getTransactionAndProperty = (transactionId: number) => {
+    const transaction = salesTransactions.find((t: any) => t.id === transactionId);
+    if (!transaction) return { transaction: null, property: null };
+    const property = salesProperties.find((p: any) => p.id === transaction.propertyId);
+    return { transaction, property };
+  };
+
+  const calculateDaysOnWeb = (transactionId: number) => {
+    const { transaction, property } = getTransactionAndProperty(transactionId);
+    if (!transaction || !property) return 0;
+    const listedDate = new Date(property.createdAt);
+    const soldDate = new Date(transaction.saleDate);
+    const days = Math.floor((soldDate.getTime() - listedDate.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, days);
+  };
+
   const filterCommissionsByDate = (commissions: any[]) => {
     if (dateFilter === 'all') return commissions;
     
@@ -78,17 +94,25 @@ export default function SalesCommissions() {
   );
 
   const downloadCSV = () => {
-    const headers = ['Commission ID', 'Transaction ID', 'Property', 'Seller Commission', 'Buyer Commission', 'Platform Fee', 'Status', 'Date'];
-    const rows = filteredCommissions.map((c: any) => [
-      c.id,
-      c.transactionId,
-      getPropertyTitle(c.transactionId),
-      parseFloat(c.sellerCommission || 0).toFixed(2),
-      parseFloat(c.buyerCommission || 0).toFixed(2),
-      parseFloat(c.platformFee || 0).toFixed(2),
-      c.status,
-      new Date(c.createdAt).toLocaleDateString()
-    ]);
+    const headers = ['Commission ID', 'Transaction ID', 'Property', 'Seller Commission', 'Buyer Commission', 'Platform Fee', 'Status', 'Date Listed', 'Date Sold', 'Total Days on Website'];
+    const rows = filteredCommissions.map((c: any) => {
+      const { transaction, property } = getTransactionAndProperty(c.transactionId);
+      const dateListed = property ? new Date(property.createdAt).toLocaleDateString() : 'N/A';
+      const dateSold = transaction ? new Date(transaction.saleDate).toLocaleDateString() : 'N/A';
+      const days = calculateDaysOnWeb(c.transactionId);
+      return [
+        c.id,
+        c.transactionId,
+        getPropertyTitle(c.transactionId),
+        parseFloat(c.sellerCommission || 0).toFixed(2),
+        parseFloat(c.buyerCommission || 0).toFixed(2),
+        parseFloat(c.platformFee || 0).toFixed(2),
+        c.status,
+        dateListed,
+        dateSold,
+        days
+      ];
+    });
 
     const csvContent = [
       headers.join(','),
@@ -191,7 +215,9 @@ export default function SalesCommissions() {
                 <TableHead className="text-right font-semibold">Other Commission</TableHead>
                 <TableHead className="text-right font-semibold">Platform Fee</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold">Date</TableHead>
+                <TableHead className="font-semibold">Date Listed</TableHead>
+                <TableHead className="font-semibold">Date Sold</TableHead>
+                <TableHead className="font-semibold text-right">Total Days</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -236,8 +262,18 @@ export default function SalesCommissions() {
                         {commission.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(commission.createdAt).toLocaleDateString()}
+                    <TableCell className="text-sm" data-testid={`text-date-listed-${commission.id}`}>
+                      {getTransactionAndProperty(commission.transactionId).property ? 
+                        new Date(getTransactionAndProperty(commission.transactionId).property!.createdAt).toLocaleDateString() 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm" data-testid={`text-date-sold-${commission.id}`}>
+                      {getTransactionAndProperty(commission.transactionId).transaction ? 
+                        new Date(getTransactionAndProperty(commission.transactionId).transaction!.saleDate).toLocaleDateString() 
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium" data-testid={`text-days-${commission.id}`}>
+                      {calculateDaysOnWeb(commission.transactionId)} days
                     </TableCell>
                   </TableRow>
                 );

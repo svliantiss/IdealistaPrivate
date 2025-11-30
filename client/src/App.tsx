@@ -18,6 +18,7 @@ import CommissionsPage from "@/pages/CommissionsPage";
 import SoldHouses from "@/pages/SoldHouses";
 import RentalCommissions from "@/pages/RentalCommissions";
 import SalesCommissions from "@/pages/SalesCommissions";
+import EmployeeStats from "@/pages/EmployeeStats";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/sold-houses" component={SoldHouses} />
       <Route path="/rental-commissions" component={RentalCommissions} />
       <Route path="/sales-commissions" component={SalesCommissions} />
+      <Route path="/employee-stats" component={EmployeeStats} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route component={NotFound} />

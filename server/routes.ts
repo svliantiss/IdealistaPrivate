@@ -461,5 +461,39 @@ export async function registerRoutes(
     }
   });
 
+  // ===== EMPLOYEE STATS ROUTES =====
+  app.get("/api/employees/agency/:agency/stats", async (req, res) => {
+    try {
+      const employees = await storage.getAgentsByAgency(req.params.agency);
+      const statsPromises = employees.map(async (emp) => {
+        const bookings = await storage.getBookingsByAgent(emp.id);
+        const commissions = await storage.getCommissionsByAgent(emp.id);
+        const salesCommissions = await storage.getSalesCommissionsByAgent(emp.id);
+        
+        const totalCommission = commissions.reduce((sum: number, c: any) => 
+          sum + parseFloat(c.ownerCommission || 0) + parseFloat(c.bookingCommission || 0), 0
+        );
+        const totalSalesCommission = salesCommissions.reduce((sum: number, c: any) => {
+          const isSeller = c.sellerAgentId === emp.id;
+          const yourCommission = isSeller ? parseFloat(c.sellerCommission || 0) : parseFloat(c.buyerCommission || 0);
+          return sum + yourCommission;
+        }, 0);
+        
+        return {
+          ...emp,
+          totalBookings: bookings.length,
+          totalCommission: parseFloat(totalCommission.toFixed(2)),
+          totalSalesCommission: parseFloat(totalSalesCommission.toFixed(2)),
+        };
+      });
+      
+      const employeeStats = await Promise.all(statsPromises);
+      res.json(employeeStats);
+    } catch (error) {
+      console.error("Error fetching employee stats:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }

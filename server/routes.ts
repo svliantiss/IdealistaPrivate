@@ -179,9 +179,9 @@ export async function registerRoutes(
       }
       const booking = await storage.createBooking(result.data);
       
-      // Auto-create commission record (10% commission pool split 48/48/4)
+      // Auto-create commission record (20% commission pool split 48/48/4)
       const totalAmount = parseFloat(booking.totalAmount);
-      const commissionPool = totalAmount * 0.10; // 10% of rental price
+      const commissionPool = totalAmount * 0.20; // 20% of rental price
       const ownerCommission = commissionPool * 0.48;
       const bookingCommission = commissionPool * 0.48;
       const platformFee = commissionPool * 0.04;

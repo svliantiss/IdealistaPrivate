@@ -15,6 +15,9 @@ import ActiveListings from "@/pages/ActiveListings";
 import PendingBookings from "@/pages/PendingBookings";
 import TotalBookings from "@/pages/TotalBookings";
 import CommissionsPage from "@/pages/CommissionsPage";
+import SoldHouses from "@/pages/SoldHouses";
+import RentalCommissions from "@/pages/RentalCommissions";
+import SalesCommissions from "@/pages/SalesCommissions";
 
 function Router() {
   return (
@@ -28,6 +31,9 @@ function Router() {
       <Route path="/pending-bookings" component={PendingBookings} />
       <Route path="/total-bookings" component={TotalBookings} />
       <Route path="/commissions" component={CommissionsPage} />
+      <Route path="/sold-houses" component={SoldHouses} />
+      <Route path="/rental-commissions" component={RentalCommissions} />
+      <Route path="/sales-commissions" component={SalesCommissions} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route component={NotFound} />

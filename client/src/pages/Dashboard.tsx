@@ -9,11 +9,12 @@ import {
   CreditCard, 
   Clock,
   Plus,
-  Search
+  Search,
+  Home
 } from "lucide-react";
 import { Link } from "wouter";
 
-const CURRENT_AGENT_ID = 1; // Hardcoded for now (John Doe)
+const CURRENT_AGENT_ID = 1;
 
 export default function Dashboard() {
   const { data: properties = [] } = useQuery<any[]>({
@@ -28,10 +29,22 @@ export default function Dashboard() {
     queryKey: [`/api/commissions/agent/${CURRENT_AGENT_ID}`],
   });
 
+  const { data: salesProperties = [] } = useQuery<any[]>({
+    queryKey: [`/api/agents/${CURRENT_AGENT_ID}/sales-properties`],
+  });
+
+  const { data: salesCommissions = [] } = useQuery<any[]>({
+    queryKey: [`/api/sales-commissions/agent/${CURRENT_AGENT_ID}`],
+  });
+
   const activeListings = properties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
+  const soldHouses = salesProperties.filter((p: any) => p.status === 'sold').length;
   const totalCommission = commissions.reduce((sum: number, c: any) => 
     sum + parseFloat(c.ownerCommission || 0) + parseFloat(c.bookingCommission || 0), 0
+  );
+  const totalSalesCommission = salesCommissions.reduce((sum: number, c: any) => 
+    sum + parseFloat(c.sellerCommission || 0) + parseFloat(c.buyerCommission || 0), 0
   );
 
   return (
@@ -50,13 +63,14 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { title: "Active Listings", value: activeListings.toString(), change: "+2 this week", icon: Building, color: "text-blue-500", link: "/active-listings" },
             { title: "Pending Bookings", value: pendingBookings.toString(), change: `${pendingBookings} need action`, icon: Clock, color: "text-amber-500", link: "/pending-bookings" },
             { title: "Total Bookings", value: bookings.length.toString(), change: "+12% vs last month", icon: Users, color: "text-emerald-500", link: "/total-bookings" },
-            { title: "Commission (YTD)", value: `€${totalCommission.toFixed(0)}`, change: "+8% vs last year", icon: CreditCard, color: "text-violet-500", link: "/commissions" },
+            { title: "Sold Houses", value: soldHouses.toString(), change: "Properties sold", icon: Home, color: "text-green-600", link: "/sold-houses" },
+            { title: "Rental Commissions", value: `€${totalCommission.toFixed(0)}`, change: "From bookings", icon: CreditCard, color: "text-violet-500", link: "/rental-commissions" },
+            { title: "Sales Commissions", value: `€${totalSalesCommission.toFixed(0)}`, change: "From sales", icon: CreditCard, color: "text-orange-500", link: "/sales-commissions" },
           ].map((stat, i) => (
             <Link key={i} href={stat.link}>
               <Card className="shadow-sm hover:shadow-md transition-shadow border-border/50 cursor-pointer">
@@ -77,7 +91,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Activity */}
           <Card className="col-span-2 shadow-sm border-border/50">
             <CardHeader>
               <CardTitle className="font-serif">Recent Bookings</CardTitle>
@@ -112,7 +125,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
           <Card className="shadow-sm border-border/50 bg-sidebar text-sidebar-foreground">
             <CardHeader>
               <CardTitle className="font-serif text-sidebar-primary-foreground">Quick Actions</CardTitle>

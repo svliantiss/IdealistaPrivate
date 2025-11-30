@@ -34,6 +34,16 @@ export async function registerRoutes(
 ): Promise<Server> {
   
   // ===== AGENT ROUTES =====
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const agents = await storage.getAllAgents();
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/agents/:id", async (req, res) => {
     try {
       const agent = await storage.getAgent(parseInt(req.params.id));

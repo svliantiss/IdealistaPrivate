@@ -32,7 +32,7 @@ export default function SalesCommissions() {
   });
 
   const { data: agents = [] } = useQuery<any[]>({
-    queryKey: [`/api/admin/agents`],
+    queryKey: [`/api/agents`],
   });
 
   const getPropertyTitle = (transactionId: number) => {

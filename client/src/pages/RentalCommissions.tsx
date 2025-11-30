@@ -32,7 +32,7 @@ export default function RentalCommissions() {
   });
 
   const { data: agents = [] } = useQuery<any[]>({
-    queryKey: [`/api/admin/agents`],
+    queryKey: [`/api/agents`],
   });
 
   const getPropertyTitle = (bookingId: number) => {

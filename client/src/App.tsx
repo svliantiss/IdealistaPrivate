@@ -11,6 +11,7 @@ import Bookings from "@/pages/Bookings";
 import Sales from "@/pages/Sales";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
+import ActiveListings from "@/pages/ActiveListings";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/properties" component={Properties} />
       <Route path="/bookings" component={Bookings} />
       <Route path="/sales" component={Sales} />
+      <Route path="/active-listings" component={ActiveListings} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route component={NotFound} />

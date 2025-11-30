@@ -301,12 +301,14 @@ export async function registerRoutes(
   app.get("/api/sales-properties", async (req, res) => {
     try {
       const { location, propertyType, minPrice, maxPrice, status } = req.query;
+      // If no status specified, fetch all statuses (active, sold, etc.)
+      const statusFilter = status ? (status as string) : undefined;
       const properties = await storage.getAllSalesProperties({
         location: location as string,
         propertyType: propertyType as string,
         minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
         maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
-        status: (status as string) || "active",
+        status: statusFilter,
       });
       res.json(properties);
     } catch (error) {

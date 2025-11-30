@@ -28,11 +28,7 @@ export default function SalesCommissions() {
   });
 
   const { data: salesProperties = [] } = useQuery<any[]>({
-    queryKey: [`/api/sales-properties?status=`],
-    queryFn: async () => {
-      const res = await fetch('/api/sales-properties?status=');
-      return res.json();
-    }
+    queryKey: [`/api/sales-properties`],
   });
 
   const { data: agents = [] } = useQuery<any[]>({

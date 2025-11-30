@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import path from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -45,6 +46,10 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Serve static assets (generated images, etc.)
+const assetsPath = path.resolve(process.cwd(), "attached_assets");
+app.use("/assets", express.static(assetsPath));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

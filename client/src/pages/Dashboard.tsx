@@ -83,7 +83,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-serif font-bold text-primary">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, John. Here's what's happening today.</p>
+            <p className="text-muted-foreground mt-1">Welcome back, Ryan. Here's what's happening today.</p>
           </div>
           <Link href="/properties">
             <Button className="bg-sidebar text-white hover:bg-sidebar/90 shadow-md gap-2" data-testid="button-add-property">

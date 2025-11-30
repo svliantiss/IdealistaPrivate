@@ -62,7 +62,7 @@ export default function ActiveListings() {
             data-testid="button-rentals-tab"
           >
             <Building className="h-4 w-4 mr-2" />
-            For Rent
+            For Rent ({activeRentals.length})
           </Button>
           <Button
             variant={listingType === 'sales' ? 'default' : 'ghost'}
@@ -71,7 +71,7 @@ export default function ActiveListings() {
             data-testid="button-sales-tab"
           >
             <Home className="h-4 w-4 mr-2" />
-            For Sale
+            For Sale ({activeSales.length})
           </Button>
         </div>
 

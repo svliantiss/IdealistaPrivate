@@ -22,7 +22,7 @@ export default function ActiveListings() {
 
   const isLoading = rentalLoading || salesLoading;
   const activeRentals = properties.filter((p: any) => p.status === 'active').slice(0, 3);
-  const activeSales = salesProperties.slice(0, 3);
+  const activeSales = salesProperties.filter((p: any) => p.status !== 'sold').slice(0, 3);
 
   if (isLoading) {
     return (

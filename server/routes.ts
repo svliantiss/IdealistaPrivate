@@ -179,11 +179,12 @@ export async function registerRoutes(
       }
       const booking = await storage.createBooking(result.data);
       
-      // Auto-create commission record (48% to each agent, 4% platform fee)
+      // Auto-create commission record (10% commission pool split 48/48/4)
       const totalAmount = parseFloat(booking.totalAmount);
-      const ownerCommission = totalAmount * 0.48;
-      const bookingCommission = totalAmount * 0.48;
-      const platformFee = totalAmount * 0.04;
+      const commissionPool = totalAmount * 0.10; // 10% of rental price
+      const ownerCommission = commissionPool * 0.48;
+      const bookingCommission = commissionPool * 0.48;
+      const platformFee = commissionPool * 0.04;
       
       await storage.createCommission({
         bookingId: booking.id,

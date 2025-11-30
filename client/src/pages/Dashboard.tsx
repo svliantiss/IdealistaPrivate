@@ -65,7 +65,7 @@ export default function Dashboard() {
   const allListings = [...properties, ...allProperties];
   const propertyOfTheDay = getPropertyOfTheDay(allListings);
 
-  const activeListings = properties.filter((p: any) => p.status === 'active').length;
+  const activeListings = properties.filter((p: any) => p.status === 'active').length + salesProperties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
   const soldHouses = salesProperties.filter((p: any) => p.status === 'sold').length;
   const totalCommission = commissions.reduce((sum: number, c: any) => 

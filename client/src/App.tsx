@@ -12,6 +12,9 @@ import Sales from "@/pages/Sales";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import ActiveListings from "@/pages/ActiveListings";
+import PendingBookings from "@/pages/PendingBookings";
+import TotalBookings from "@/pages/TotalBookings";
+import CommissionsPage from "@/pages/CommissionsPage";
 
 function Router() {
   return (
@@ -22,6 +25,9 @@ function Router() {
       <Route path="/bookings" component={Bookings} />
       <Route path="/sales" component={Sales} />
       <Route path="/active-listings" component={ActiveListings} />
+      <Route path="/pending-bookings" component={PendingBookings} />
+      <Route path="/total-bookings" component={TotalBookings} />
+      <Route path="/commissions" component={CommissionsPage} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route component={NotFound} />

@@ -169,13 +169,11 @@ export async function registerRoutes(
       }
       const booking = await storage.createBooking(result.data);
       
-      // Auto-create commission record
-      const commissionRate = 10; // 10% commission
+      // Auto-create commission record (48% to each agent, 4% platform fee)
       const totalAmount = parseFloat(booking.totalAmount);
-      const platformFee = totalAmount * 0.05; // 5% platform fee
-      const totalCommission = totalAmount * (commissionRate / 100);
-      const ownerCommission = totalCommission * 0.5;
-      const bookingCommission = totalCommission * 0.5;
+      const ownerCommission = totalAmount * 0.48;
+      const bookingCommission = totalAmount * 0.48;
+      const platformFee = totalAmount * 0.04;
       
       await storage.createCommission({
         bookingId: booking.id,
@@ -185,7 +183,7 @@ export async function registerRoutes(
         ownerCommission: ownerCommission.toFixed(2),
         bookingCommission: bookingCommission.toFixed(2),
         platformFee: platformFee.toFixed(2),
-        commissionRate: commissionRate.toFixed(2),
+        commissionRate: "96.00",
         status: "pending",
       });
       

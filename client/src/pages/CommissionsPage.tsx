@@ -31,11 +31,23 @@ export default function CommissionsPage() {
     queryKey: [`/api/properties`],
   });
 
+  const { data: agents = [] } = useQuery<any[]>({
+    queryKey: [`/api/admin/agents`],
+  });
+
   const getPropertyTitle = (bookingId: number) => {
     const booking = bookings.find((b: any) => b.id === bookingId);
     if (!booking) return 'Unknown Property';
     const property = properties.find((p: any) => p.id === booking.propertyId);
     return property?.title || 'Unknown Property';
+  };
+
+  const getOtherAgent = (commission: any) => {
+    if (commission.ownerAgentId === CURRENT_AGENT_ID) {
+      return agents.find((a: any) => a.id === commission.bookingAgentId);
+    } else {
+      return agents.find((a: any) => a.id === commission.ownerAgentId);
+    }
   };
 
   const getBookingDetails = (bookingId: number) => {
@@ -185,48 +197,62 @@ export default function CommissionsPage() {
                 <TableHead className="font-semibold">Commission ID</TableHead>
                 <TableHead className="font-semibold">Booking</TableHead>
                 <TableHead className="font-semibold">Property</TableHead>
-                <TableHead className="text-right font-semibold">Owner Comm.</TableHead>
-                <TableHead className="text-right font-semibold">Booking Comm.</TableHead>
+                <TableHead className="font-semibold">Other Agent / Agency</TableHead>
+                <TableHead className="text-right font-semibold">Your Commission</TableHead>
+                <TableHead className="text-right font-semibold">Other Commission</TableHead>
                 <TableHead className="text-right font-semibold">Platform Fee</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCommissions.map((commission: any) => (
-                <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
-                  <TableCell className="font-medium font-mono text-xs text-muted-foreground">
-                    COM-{commission.id}
-                  </TableCell>
-                  <TableCell className="font-medium" data-testid={`text-booking-${commission.id}`}>
-                    BK-{commission.bookingId}
-                  </TableCell>
-                  <TableCell className="text-sm" data-testid={`text-property-${commission.id}`}>
-                    {getPropertyTitle(commission.bookingId)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium" data-testid={`text-owner-commission-${commission.id}`}>
-                    €{parseFloat(commission.ownerCommission || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium" data-testid={`text-booking-commission-${commission.id}`}>
-                    €{parseFloat(commission.bookingCommission || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-amber-600" data-testid={`text-fee-${commission.id}`}>
-                    €{parseFloat(commission.platformFee || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={commission.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-700 border-slate-200'}
-                      data-testid={`badge-status-${commission.id}`}
-                    >
-                      {commission.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(commission.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredCommissions.map((commission: any) => {
+                const otherAgent = getOtherAgent(commission);
+                const isOwner = commission.ownerAgentId === CURRENT_AGENT_ID;
+                const yourCommission = isOwner ? commission.ownerCommission : commission.bookingCommission;
+                const otherCommission = isOwner ? commission.bookingCommission : commission.ownerCommission;
+                
+                return (
+                  <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
+                    <TableCell className="font-medium font-mono text-xs text-muted-foreground">
+                      COM-{commission.id}
+                    </TableCell>
+                    <TableCell className="font-medium" data-testid={`text-booking-${commission.id}`}>
+                      BK-{commission.bookingId}
+                    </TableCell>
+                    <TableCell className="text-sm" data-testid={`text-property-${commission.id}`}>
+                      {getPropertyTitle(commission.bookingId)}
+                    </TableCell>
+                    <TableCell className="text-sm" data-testid={`text-agent-${commission.id}`}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{otherAgent?.name || 'Unknown'}</span>
+                        <span className="text-xs text-muted-foreground">{otherAgent?.agency || 'No agency'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-emerald-600" data-testid={`text-your-commission-${commission.id}`}>
+                      €{parseFloat(yourCommission || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-blue-600" data-testid={`text-other-commission-${commission.id}`}>
+                      €{parseFloat(otherCommission || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-amber-600" data-testid={`text-fee-${commission.id}`}>
+                      €{parseFloat(commission.platformFee || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={commission.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-700 border-slate-200'}
+                        data-testid={`badge-status-${commission.id}`}
+                      >
+                        {commission.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(commission.createdAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           

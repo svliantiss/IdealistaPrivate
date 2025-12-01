@@ -42,7 +42,9 @@ export default function TotalBookings() {
     }
   };
 
-  const totalValue = bookings.reduce((sum: number, b: any) => sum + parseFloat(b.totalAmount || 0), 0);
+  // Filter out cancelled and archived bookings - they should only appear in Archive
+  const activeBookings = bookings.filter((b: any) => b.status !== 'cancelled' && b.status !== 'archived');
+  const totalValue = activeBookings.reduce((sum: number, b: any) => sum + parseFloat(b.totalAmount || 0), 0);
 
   if (isLoading) {
     return (
@@ -87,7 +89,7 @@ export default function TotalBookings() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.map((booking: any) => (
+              {activeBookings.map((booking: any) => (
                 <TableRow key={booking.id} data-testid={`row-booking-${booking.id}`}>
                   <TableCell className="font-medium font-mono text-xs text-muted-foreground">
                     BK-{booking.id}
@@ -124,9 +126,9 @@ export default function TotalBookings() {
             </TableBody>
           </Table>
           
-          {bookings.length === 0 && (
+          {activeBookings.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              No bookings found
+              No active bookings found
             </div>
           )}
         </div>

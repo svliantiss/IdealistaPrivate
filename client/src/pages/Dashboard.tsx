@@ -42,6 +42,8 @@ export default function Dashboard() {
   const activeListings = properties.filter((p: any) => p.status === 'active').length + salesProperties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
   const soldHouses = salesProperties.filter((p: any) => p.status === 'sold').length;
+  // Filter out cancelled and archived bookings from the total count
+  const activeBookings = bookings.filter((b: any) => b.status !== 'cancelled' && b.status !== 'archived');
   
   // Filter out commissions for cancelled bookings
   const activeCommissions = commissions.filter((c: any) => {
@@ -79,7 +81,7 @@ export default function Dashboard() {
           {[
             { title: "Active Listings", value: activeListings.toString(), change: "+2 this week", icon: Building, color: "text-blue-500", link: "/active-listings" },
             { title: "Pending Bookings", value: pendingBookings.toString(), change: `${pendingBookings} need action`, icon: Clock, color: "text-amber-500", link: "/pending-bookings" },
-            { title: "Total Bookings", value: bookings.length.toString(), change: "+12% vs last month", icon: Users, color: "text-emerald-500", link: "/total-bookings" },
+            { title: "Total Bookings", value: activeBookings.length.toString(), change: "+12% vs last month", icon: Users, color: "text-emerald-500", link: "/total-bookings" },
             { title: "Sold Houses", value: soldHouses.toString(), change: "Properties sold", icon: Home, color: "text-green-600", link: "/sold-houses" },
             { title: "Rental Commissions", value: `€${totalCommission.toFixed(0)}`, change: "From bookings", icon: CreditCard, color: "text-violet-500", link: "/rental-commissions" },
             { title: "Sales Commissions", value: `€${totalSalesCommission.toFixed(0)}`, change: "From sales", icon: CreditCard, color: "text-orange-500", link: "/sales-commissions" },

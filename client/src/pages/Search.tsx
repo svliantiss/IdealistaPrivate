@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Select, 
   SelectContent, 
@@ -16,7 +16,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X, Building2, Home } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X, Building2, Home, Phone, Mail, User } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -39,10 +46,12 @@ export default function Search() {
   const [minBaths, setMinBaths] = useState<string>("any");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
+  const [minSqm, setMinSqm] = useState<string>("");
+  const [maxSqm, setMaxSqm] = useState<string>("");
   const [checkInDate, setCheckInDate] = useState<string>("");
   const [checkOutDate, setCheckOutDate] = useState<string>("");
   
-  const [amenityFilters, setAmenityFilters] = useState<AmenityFilter[]>([
+  const [rentalAmenityFilters, setRentalAmenityFilters] = useState<AmenityFilter[]>([
     { 
       id: "pool", 
       label: "Pool", 
@@ -79,8 +88,76 @@ export default function Search() {
     { id: "elevator", label: "Elevator", checked: false },
   ]);
 
-  const toggleAmenity = (id: string, isSubFilter: boolean = false, parentId?: string) => {
-    setAmenityFilters(prev => prev.map(filter => {
+  const [salesAmenityFilters, setSalesAmenityFilters] = useState<AmenityFilter[]>([
+    { 
+      id: "pool", 
+      label: "Pool", 
+      checked: false,
+      subFilters: [
+        { id: "heated_pool", label: "Heated Pool", checked: false },
+        { id: "infinity_pool", label: "Infinity Pool", checked: false }
+      ]
+    },
+    { 
+      id: "parking", 
+      label: "Parking", 
+      checked: false,
+      subFilters: [
+        { id: "garage", label: "Garage", checked: false },
+        { id: "covered", label: "Covered Parking", checked: false }
+      ]
+    },
+    { 
+      id: "sea_view", 
+      label: "Sea View", 
+      checked: false,
+      subFilters: [
+        { id: "beach_access", label: "Beach Access", checked: false },
+        { id: "beachfront", label: "Beachfront", checked: false }
+      ]
+    },
+    { id: "garden", label: "Garden", checked: false },
+    { id: "terrace", label: "Terrace", checked: false },
+    { id: "security", label: "Security", checked: false },
+    { 
+      id: "golf", 
+      label: "Golf", 
+      checked: false,
+      subFilters: [
+        { id: "golf_view", label: "Golf View", checked: false }
+      ]
+    },
+    { id: "gym", label: "Gym", checked: false },
+    { id: "concierge", label: "Concierge", checked: false },
+    { id: "wine_cellar", label: "Wine Cellar", checked: false },
+    { id: "home_office", label: "Home Office", checked: false },
+    { id: "guest_house", label: "Guest House", checked: false },
+  ]);
+
+  const toggleRentalAmenity = (id: string, isSubFilter: boolean = false, parentId?: string) => {
+    setRentalAmenityFilters(prev => prev.map(filter => {
+      if (isSubFilter && parentId && filter.id === parentId) {
+        return {
+          ...filter,
+          subFilters: filter.subFilters?.map(sub => 
+            sub.id === id ? { ...sub, checked: !sub.checked } : sub
+          )
+        };
+      }
+      if (!isSubFilter && filter.id === id) {
+        const newChecked = !filter.checked;
+        return {
+          ...filter,
+          checked: newChecked,
+          subFilters: newChecked ? filter.subFilters : filter.subFilters?.map(sub => ({ ...sub, checked: false }))
+        };
+      }
+      return filter;
+    }));
+  };
+
+  const toggleSalesAmenity = (id: string, isSubFilter: boolean = false, parentId?: string) => {
+    setSalesAmenityFilters(prev => prev.map(filter => {
       if (isSubFilter && parentId && filter.id === parentId) {
         return {
           ...filter,
@@ -103,6 +180,8 @@ export default function Search() {
 
   const activeFilters = useMemo(() => {
     const filters: string[] = [];
+    const amenityFilters = activeTab === "rentals" ? rentalAmenityFilters : salesAmenityFilters;
+    
     amenityFilters.forEach(filter => {
       if (filter.checked) {
         filters.push(filter.label);
@@ -113,21 +192,33 @@ export default function Search() {
     });
     if (minBeds !== "any") filters.push(`${minBeds}+ Beds`);
     if (minBaths !== "any") filters.push(`${minBaths}+ Baths`);
-    if (minPrice) filters.push(`Min €${minPrice}`);
-    if (maxPrice) filters.push(`Max €${maxPrice}`);
+    if (minPrice) filters.push(`Min €${parseInt(minPrice).toLocaleString()}`);
+    if (maxPrice) filters.push(`Max €${parseInt(maxPrice).toLocaleString()}`);
+    if (minSqm) filters.push(`Min ${minSqm}m²`);
+    if (maxSqm) filters.push(`Max ${maxSqm}m²`);
     return filters;
-  }, [amenityFilters, minBeds, minBaths, minPrice, maxPrice]);
+  }, [activeTab, rentalAmenityFilters, salesAmenityFilters, minBeds, minBaths, minPrice, maxPrice, minSqm, maxSqm]);
 
   const clearAllFilters = () => {
-    setAmenityFilters(prev => prev.map(filter => ({
-      ...filter,
-      checked: false,
-      subFilters: filter.subFilters?.map(sub => ({ ...sub, checked: false }))
-    })));
+    if (activeTab === "rentals") {
+      setRentalAmenityFilters(prev => prev.map(filter => ({
+        ...filter,
+        checked: false,
+        subFilters: filter.subFilters?.map(sub => ({ ...sub, checked: false }))
+      })));
+    } else {
+      setSalesAmenityFilters(prev => prev.map(filter => ({
+        ...filter,
+        checked: false,
+        subFilters: filter.subFilters?.map(sub => ({ ...sub, checked: false }))
+      })));
+    }
     setMinBeds("any");
     setMinBaths("any");
     setMinPrice("");
     setMaxPrice("");
+    setMinSqm("");
+    setMaxSqm("");
   };
   
   const { data: rentalProperties = [], isLoading: rentalsLoading } = useQuery<any[]>({
@@ -166,9 +257,18 @@ export default function Search() {
     queryKey: ['/api/agents'],
   });
 
+  const getAgent = (agentId: number) => {
+    return agents.find((a: any) => a.id === agentId);
+  };
+
   const getAgentName = (agentId: number) => {
-    const agent = agents.find((a: any) => a.id === agentId);
+    const agent = getAgent(agentId);
     return agent?.name || 'Unknown Agent';
+  };
+
+  const getAgentAgency = (agentId: number) => {
+    const agent = getAgent(agentId);
+    return agent?.agency || 'Unknown Agency';
   };
 
   const filteredRentalProperties = useMemo(() => {
@@ -178,11 +278,11 @@ export default function Search() {
       if (minPrice && parseFloat(property.price) < parseFloat(minPrice)) return false;
       if (maxPrice && parseFloat(property.price) > parseFloat(maxPrice)) return false;
       
-      const selectedAmenities = amenityFilters
+      const selectedAmenities = rentalAmenityFilters
         .filter(f => f.checked)
         .map(f => f.label.toLowerCase());
       
-      amenityFilters.forEach(filter => {
+      rentalAmenityFilters.forEach(filter => {
         if (filter.checked && filter.subFilters) {
           filter.subFilters.forEach(sub => {
             if (sub.checked) selectedAmenities.push(sub.label.toLowerCase());
@@ -200,7 +300,7 @@ export default function Search() {
       
       return true;
     });
-  }, [rentalProperties, minBeds, minBaths, minPrice, maxPrice, amenityFilters]);
+  }, [rentalProperties, minBeds, minBaths, minPrice, maxPrice, rentalAmenityFilters]);
 
   const filteredSalesProperties = useMemo(() => {
     return salesProperties.filter((property: any) => {
@@ -210,12 +310,102 @@ export default function Search() {
       if (minBaths !== "any" && property.baths < parseInt(minBaths)) return false;
       if (minPrice && parseFloat(property.price) < parseFloat(minPrice)) return false;
       if (maxPrice && parseFloat(property.price) > parseFloat(maxPrice)) return false;
+      if (minSqm && property.sqm < parseInt(minSqm)) return false;
+      if (maxSqm && property.sqm > parseInt(maxSqm)) return false;
+      
+      const selectedAmenities: string[] = [];
+      salesAmenityFilters.forEach(filter => {
+        if (filter.checked) {
+          selectedAmenities.push(filter.label.toLowerCase());
+          filter.subFilters?.forEach(sub => {
+            if (sub.checked) selectedAmenities.push(sub.label.toLowerCase());
+          });
+        }
+      });
+      
+      if (selectedAmenities.length > 0) {
+        const propertyAmenities = (property.amenities || []).map((a: string) => a.toLowerCase());
+        const hasAllAmenities = selectedAmenities.every(amenity => 
+          propertyAmenities.some((pa: string) => 
+            pa.includes(amenity.split(' ')[0]) || amenity.includes(pa.split(' ')[0])
+          )
+        );
+        if (!hasAllAmenities) return false;
+      }
+      
       return true;
     });
-  }, [salesProperties, searchLocation, propertyType, minBeds, minBaths, minPrice, maxPrice]);
+  }, [salesProperties, searchLocation, propertyType, minBeds, minBaths, minPrice, maxPrice, minSqm, maxSqm, salesAmenityFilters]);
 
   const getPropertyAvailability = (propertyId: number) => {
     return availabilities.filter((a: any) => a.propertyId === propertyId);
+  };
+
+  const AgentContactDialog = ({ agent, propertyTitle, propertyId }: { agent: any; propertyTitle: string; propertyId: number }) => {
+    if (!agent) return null;
+    
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button 
+            size="sm" 
+            className="h-8 bg-primary text-white hover:bg-primary/90"
+            data-testid={`button-contact-agent-${propertyId}`}
+          >
+            Contact Agent
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Contact Agent</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Interested in: <span className="font-medium text-foreground">{propertyTitle}</span>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-medium">{agent.name}</div>
+                  <div className="text-sm text-muted-foreground">{agent.agency}</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${agent.phone}`} className="text-primary hover:underline">{agent.phone}</a>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${agent.email}?subject=Inquiry: ${propertyTitle}`} className="text-primary hover:underline">{agent.email}</a>
+                </div>
+              </div>
+              
+              {agent.agencyPhone && (
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="text-xs font-medium text-muted-foreground uppercase">Agency Contact</div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${agent.agencyPhone}`} className="text-primary hover:underline">{agent.agencyPhone}</a>
+                  </div>
+                  {agent.agencyEmail && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${agent.agencyEmail}?subject=Inquiry: ${propertyTitle}`} className="text-primary hover:underline">{agent.agencyEmail}</a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   return (
@@ -328,12 +518,40 @@ export default function Search() {
                 <Badge key={i} variant="secondary" className="h-7 gap-1 px-2">
                   {filter}
                   <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => {
+                    if (filter.includes("+ Beds")) {
+                      setMinBeds("any");
+                      return;
+                    }
+                    if (filter.includes("+ Baths")) {
+                      setMinBaths("any");
+                      return;
+                    }
+                    if (filter.startsWith("Min €")) {
+                      setMinPrice("");
+                      return;
+                    }
+                    if (filter.startsWith("Max €")) {
+                      setMaxPrice("");
+                      return;
+                    }
+                    if (filter.includes("m²") && filter.startsWith("Min")) {
+                      setMinSqm("");
+                      return;
+                    }
+                    if (filter.includes("m²") && filter.startsWith("Max")) {
+                      setMaxSqm("");
+                      return;
+                    }
+                    
+                    const amenityFilters = activeTab === "rentals" ? rentalAmenityFilters : salesAmenityFilters;
+                    const toggleFn = activeTab === "rentals" ? toggleRentalAmenity : toggleSalesAmenity;
+                    
                     const amenity = amenityFilters.find(f => f.label === filter);
-                    if (amenity) toggleAmenity(amenity.id);
+                    if (amenity) toggleFn(amenity.id);
                     else {
                       amenityFilters.forEach(f => {
                         const sub = f.subFilters?.find(s => s.label === filter);
-                        if (sub) toggleAmenity(sub.id, true, f.id);
+                        if (sub) toggleFn(sub.id, true, f.id);
                       });
                     }
                   }} />
@@ -355,7 +573,7 @@ export default function Search() {
 
             <CollapsibleContent className="mt-4">
               <div className="bg-slate-50 rounded-lg p-6 border border-slate-200 space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Min Beds</label>
                     <Select value={minBeds} onValueChange={setMinBeds}>
@@ -393,7 +611,7 @@ export default function Search() {
                     </label>
                     <Input 
                       type="number" 
-                      placeholder="€0" 
+                      placeholder={activeTab === "rentals" ? "€0" : "€100,000"} 
                       className="bg-white"
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
@@ -406,61 +624,87 @@ export default function Search() {
                     </label>
                     <Input 
                       type="number" 
-                      placeholder={activeTab === "rentals" ? "€1000" : "€2000000"} 
+                      placeholder={activeTab === "rentals" ? "€1000" : "€5,000,000"} 
                       className="bg-white"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                       data-testid="input-max-price"
                     />
                   </div>
+                  {activeTab === "buy" && (
+                    <>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Min Size (m²)</label>
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          className="bg-white"
+                          value={minSqm}
+                          onChange={(e) => setMinSqm(e.target.value)}
+                          data-testid="input-min-sqm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Max Size (m²)</label>
+                        <Input 
+                          type="number" 
+                          placeholder="1000" 
+                          className="bg-white"
+                          value={maxSqm}
+                          onChange={(e) => setMaxSqm(e.target.value)}
+                          data-testid="input-max-sqm"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {activeTab === "rentals" && (
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wider">Amenities</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {amenityFilters.map((filter) => (
-                        <div key={filter.id} className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={filter.id} 
-                              checked={filter.checked}
-                              onCheckedChange={() => toggleAmenity(filter.id)}
-                              data-testid={`checkbox-${filter.id}`}
-                            />
-                            <label 
-                              htmlFor={filter.id} 
-                              className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {filter.label}
-                            </label>
-                          </div>
-                          
-                          {filter.checked && filter.subFilters && (
-                            <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-3">
-                              {filter.subFilters.map((subFilter) => (
-                                <div key={subFilter.id} className="flex items-center space-x-2">
-                                  <Checkbox 
-                                    id={subFilter.id} 
-                                    checked={subFilter.checked}
-                                    onCheckedChange={() => toggleAmenity(subFilter.id, true, filter.id)}
-                                    data-testid={`checkbox-${subFilter.id}`}
-                                  />
-                                  <label 
-                                    htmlFor={subFilter.id} 
-                                    className="text-sm text-muted-foreground leading-none cursor-pointer"
-                                  >
-                                    {subFilter.label}
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wider">
+                    {activeTab === "rentals" ? "Amenities" : "Features & Amenities"}
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {(activeTab === "rentals" ? rentalAmenityFilters : salesAmenityFilters).map((filter) => (
+                      <div key={filter.id} className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`${activeTab}-${filter.id}`} 
+                            checked={filter.checked}
+                            onCheckedChange={() => activeTab === "rentals" ? toggleRentalAmenity(filter.id) : toggleSalesAmenity(filter.id)}
+                            data-testid={`checkbox-${filter.id}`}
+                          />
+                          <label 
+                            htmlFor={`${activeTab}-${filter.id}`} 
+                            className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {filter.label}
+                          </label>
                         </div>
-                      ))}
-                    </div>
+                        
+                        {filter.checked && filter.subFilters && (
+                          <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-3">
+                            {filter.subFilters.map((subFilter) => (
+                              <div key={subFilter.id} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={`${activeTab}-${subFilter.id}`} 
+                                  checked={subFilter.checked}
+                                  onCheckedChange={() => activeTab === "rentals" ? toggleRentalAmenity(subFilter.id, true, filter.id) : toggleSalesAmenity(subFilter.id, true, filter.id)}
+                                  data-testid={`checkbox-${subFilter.id}`}
+                                />
+                                <label 
+                                  htmlFor={`${activeTab}-${subFilter.id}`} 
+                                  className="text-sm text-muted-foreground leading-none cursor-pointer"
+                                >
+                                  {subFilter.label}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -593,100 +837,101 @@ export default function Search() {
                 <div className="text-center py-12 text-muted-foreground">No properties for sale found matching your criteria.</div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredSalesProperties.map((property: any) => (
-                    <div 
-                      key={property.id} 
-                      className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer" 
-                      data-testid={`card-sale-${property.id}`}
-                    >
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <img 
-                          src={property.images?.[0] || '/placeholder.jpg'} 
-                          alt={property.title}
-                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-3 right-3 flex gap-2">
-                          <Button 
-                            size="icon" 
-                            variant="secondary" 
-                            className="h-8 w-8 rounded-full bg-white/90 text-slate-900 hover:bg-white hover:text-red-500 shadow-sm"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Heart className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="absolute bottom-3 left-3 flex gap-2">
-                          <Badge className="bg-blue-500 text-white border-0">
-                            For Sale
-                          </Badge>
-                          <Badge className="bg-white/90 text-slate-900 hover:bg-white backdrop-blur-sm shadow-sm border-0 capitalize">
-                            {property.propertyType}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="p-5 flex flex-col flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Listed by {getAgentName(property.agentId)}
-                          </div>
-                        </div>
-                        
-                        <h3 className="font-serif text-lg font-bold text-primary mb-1 line-clamp-1 group-hover:text-secondary transition-colors" data-testid={`text-sale-title-${property.id}`}>
-                          {property.title}
-                        </h3>
-                        <div className="flex items-center text-muted-foreground text-sm mb-3">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {property.location}
-                        </div>
-
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {(property.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
-                              {amenity}
-                            </Badge>
-                          ))}
-                          {(property.amenities || []).length > 4 && (
-                            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
-                              +{property.amenities.length - 4} more
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
-                          <div className="flex items-center gap-1">
-                            <span className="font-semibold">{property.beds}</span> <span className="text-muted-foreground text-xs">Beds</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-semibold">{property.baths}</span> <span className="text-muted-foreground text-xs">Baths</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-semibold">{property.sqm}</span> <span className="text-muted-foreground text-xs">m²</span>
-                          </div>
-                        </div>
-
-                        <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                          <div>
-                            <span className="text-xl font-bold text-primary" data-testid={`text-sale-price-${property.id}`}>
-                              €{parseFloat(property.price).toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="outline" size="sm" className="h-8 px-2">
-                              <Share2 className="h-4 w-4" />
-                            </Button>
+                  {filteredSalesProperties.map((property: any) => {
+                    const agent = getAgent(property.agentId);
+                    
+                    return (
+                      <div 
+                        key={property.id} 
+                        className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden" 
+                        data-testid={`card-sale-${property.id}`}
+                      >
+                        <div className="relative aspect-[4/3] overflow-hidden">
+                          <img 
+                            src={property.images?.[0] || '/placeholder.jpg'} 
+                            alt={property.title}
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 right-3 flex gap-2">
                             <Button 
-                              size="sm" 
-                              className="h-8 bg-primary text-white hover:bg-primary/90" 
-                              data-testid={`button-sale-details-${property.id}`}
+                              size="icon" 
+                              variant="secondary" 
+                              className="h-8 w-8 rounded-full bg-white/90 text-slate-900 hover:bg-white hover:text-red-500 shadow-sm"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              Contact Agent
+                              <Heart className="h-4 w-4" />
                             </Button>
+                          </div>
+                          <div className="absolute bottom-3 left-3 flex gap-2">
+                            <Badge className="bg-blue-500 text-white border-0">
+                              For Sale
+                            </Badge>
+                            <Badge className="bg-white/90 text-slate-900 hover:bg-white backdrop-blur-sm shadow-sm border-0 capitalize">
+                              {property.propertyType}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="p-5 flex flex-col flex-1">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              {getAgentAgency(property.agentId)}
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {getAgentName(property.agentId)}
+                            </Badge>
+                          </div>
+                          
+                          <h3 className="font-serif text-lg font-bold text-primary mb-1 line-clamp-1 group-hover:text-secondary transition-colors" data-testid={`text-sale-title-${property.id}`}>
+                            {property.title}
+                          </h3>
+                          <div className="flex items-center text-muted-foreground text-sm mb-3">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {property.location}
+                          </div>
+
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {(property.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
+                                {amenity}
+                              </Badge>
+                            ))}
+                            {(property.amenities || []).length > 4 && (
+                              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
+                                +{property.amenities.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.beds}</span> <span className="text-muted-foreground text-xs">Beds</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.baths}</span> <span className="text-muted-foreground text-xs">Baths</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.sqm}</span> <span className="text-muted-foreground text-xs">m²</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                            <div>
+                              <span className="text-xl font-bold text-primary" data-testid={`text-sale-price-${property.id}`}>
+                                €{parseFloat(property.price).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="outline" size="sm" className="h-8 px-2">
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                              <AgentContactDialog agent={agent} propertyTitle={property.title} propertyId={property.id} />
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             )}

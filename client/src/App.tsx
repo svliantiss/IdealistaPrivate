@@ -22,6 +22,7 @@ import EmployeeStats from "@/pages/EmployeeStats";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 import PropertyDetails from "@/pages/PropertyDetails";
 import EditProperty from "@/pages/EditProperty";
+import MyBookings from "@/pages/MyBookings";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/properties" component={Properties} />
       <Route path="/properties/:id/edit" component={EditProperty} />
       <Route path="/bookings" component={Bookings} />
+      <Route path="/my-bookings" component={MyBookings} />
       <Route path="/sales" component={Sales} />
       <Route path="/active-listings" component={ActiveListings} />
       <Route path="/pending-bookings" component={PendingBookings} />

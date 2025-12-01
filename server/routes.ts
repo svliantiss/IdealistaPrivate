@@ -197,6 +197,14 @@ export async function registerRoutes(
         commissionRate: "96.00",
         status: "pending",
       });
+
+      // Mark dates as booked in property availability
+      await storage.createPropertyAvailability({
+        propertyId: booking.propertyId,
+        startDate: booking.checkIn,
+        endDate: booking.checkOut,
+        isAvailable: 0, // 0 = booked
+      });
       
       res.status(201).json(booking);
     } catch (error) {

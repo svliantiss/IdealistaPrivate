@@ -244,9 +244,8 @@ export default function PropertyDetails() {
       clientPhone,
       checkIn: formatDate(checkInDate),
       checkOut: formatDate(checkOutDate),
-      totalPrice: calculateTotal(),
+      totalAmount: calculateTotal(),
       status: "confirmed",
-      notes,
     });
   };
 

@@ -24,7 +24,7 @@ export default function RentalCommissions() {
   });
 
   const { data: bookings = [] } = useQuery<any[]>({
-    queryKey: [`/api/bookings?agentId=${CURRENT_AGENT_ID}`],
+    queryKey: [`/api/bookings`],
   });
 
   const { data: properties = [] } = useQuery<any[]>({
@@ -64,7 +64,13 @@ export default function RentalCommissions() {
   };
 
   const filterCommissionsByDate = (commissions: any[]) => {
-    if (dateFilter === 'all') return commissions;
+    // First filter out cancelled bookings
+    let filtered = commissions.filter((c: any) => {
+      const booking = getBooking(c.bookingId);
+      return booking && booking.status !== 'cancelled';
+    });
+    
+    if (dateFilter === 'all') return filtered;
     
     const now = new Date();
     const startDate = new Date();
@@ -77,7 +83,7 @@ export default function RentalCommissions() {
       startDate.setFullYear(now.getFullYear() - 1);
     }
 
-    return commissions.filter((c: any) => new Date(c.createdAt) >= startDate);
+    return filtered.filter((c: any) => new Date(c.createdAt) >= startDate);
   };
 
   const filteredCommissions = filterCommissionsByDate(commissions);

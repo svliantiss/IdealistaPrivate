@@ -151,9 +151,13 @@ export default function Bookings() {
     return isoStr.split('T')[0];
   };
 
-  // Split my bookings into active and archived
-  const activeMyBookings = myBookings.filter((booking: any) => booking.status !== 'archived');
-  const archivedMyBookings = myBookings.filter((booking: any) => booking.status === 'archived');
+  // Split my bookings into active and archived (archived includes both archived and cancelled)
+  const activeMyBookings = myBookings.filter((booking: any) => 
+    booking.status !== 'archived' && booking.status !== 'cancelled'
+  );
+  const archivedMyBookings = myBookings.filter((booking: any) => 
+    booking.status === 'archived' || booking.status === 'cancelled'
+  );
 
   // Apply filters to active bookings
   const filteredMyBookings = activeMyBookings.filter((booking: any) => {
@@ -683,8 +687,8 @@ export default function Bookings() {
                                 <span>{property?.location || 'Unknown'}</span>
                               </div>
                             </div>
-                            <Badge variant="outline" className={getStatusBadgeClass('archived')}>
-                              Archived
+                            <Badge variant="outline" className={getStatusBadgeClass(booking.status)}>
+                              {booking.status === 'cancelled' ? 'Cancelled' : 'Archived'}
                             </Badge>
                           </div>
                         </div>

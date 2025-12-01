@@ -23,7 +23,7 @@ export default function Dashboard() {
   });
 
   const { data: bookings = [] } = useQuery<any[]>({
-    queryKey: [`/api/bookings?agentId=${CURRENT_AGENT_ID}`],
+    queryKey: [`/api/bookings`],
   });
 
   const { data: commissions = [] } = useQuery<any[]>({
@@ -42,7 +42,13 @@ export default function Dashboard() {
   const activeListings = properties.filter((p: any) => p.status === 'active').length + salesProperties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
   const soldHouses = salesProperties.filter((p: any) => p.status === 'sold').length;
-  const totalCommission = commissions.reduce((sum: number, c: any) => {
+  
+  // Filter out commissions for cancelled bookings
+  const activeCommissions = commissions.filter((c: any) => {
+    const booking = bookings.find((b: any) => b.id === c.bookingId);
+    return booking && booking.status !== 'cancelled';
+  });
+  const totalCommission = activeCommissions.reduce((sum: number, c: any) => {
     const isOwner = c.ownerAgentId === CURRENT_AGENT_ID;
     const yourCommission = isOwner ? parseFloat(c.ownerCommission || 0) : parseFloat(c.bookingCommission || 0);
     return sum + yourCommission;

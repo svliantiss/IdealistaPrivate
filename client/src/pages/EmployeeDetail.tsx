@@ -26,7 +26,7 @@ export default function EmployeeDetail() {
   });
 
   const { data: bookings = [] } = useQuery<any[]>({
-    queryKey: [`/api/bookings?agentId=${agentId}`],
+    queryKey: [`/api/bookings`],
     enabled: !!agentId,
   });
 
@@ -52,7 +52,13 @@ export default function EmployeeDetail() {
 
   const activeRentals = properties.filter((p: any) => p.status === 'active');
   const activeSales = salesProperties.filter((p: any) => p.status !== 'sold');
-  const totalCommission = commissions.reduce((sum: number, c: any) => {
+  
+  // Filter out commissions for cancelled bookings
+  const activeCommissions = commissions.filter((c: any) => {
+    const booking = bookings.find((b: any) => b.id === c.bookingId);
+    return booking && booking.status !== 'cancelled';
+  });
+  const totalCommission = activeCommissions.reduce((sum: number, c: any) => {
     const isOwner = c.ownerAgentId === agentId;
     const yourCommission = isOwner ? parseFloat(c.ownerCommission || 0) : parseFloat(c.bookingCommission || 0);
     return sum + yourCommission;

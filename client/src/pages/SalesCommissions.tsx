@@ -24,7 +24,7 @@ export default function SalesCommissions() {
   });
 
   const { data: salesTransactions = [] } = useQuery<any[]>({
-    queryKey: [`/api/sales-transactions?agentId=${CURRENT_AGENT_ID}`],
+    queryKey: [`/api/sales-transactions`],
   });
 
   const { data: salesProperties = [] } = useQuery<any[]>({
@@ -66,8 +66,18 @@ export default function SalesCommissions() {
     return Math.max(0, days);
   };
 
+  const getTransaction = (transactionId: number) => {
+    return salesTransactions.find((t: any) => t.id === transactionId);
+  };
+
   const filterCommissionsByDate = (commissions: any[]) => {
-    if (dateFilter === 'all') return commissions;
+    // First filter out cancelled transactions
+    let filtered = commissions.filter((c: any) => {
+      const transaction = getTransaction(c.transactionId);
+      return transaction && transaction.status !== 'cancelled';
+    });
+    
+    if (dateFilter === 'all') return filtered;
     
     const now = new Date();
     const startDate = new Date();
@@ -80,7 +90,7 @@ export default function SalesCommissions() {
       startDate.setFullYear(now.getFullYear() - 1);
     }
 
-    return commissions.filter((c: any) => new Date(c.createdAt) >= startDate);
+    return filtered.filter((c: any) => new Date(c.createdAt) >= startDate);
   };
 
   const filteredCommissions = filterCommissionsByDate(salesCommissions);

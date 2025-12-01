@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema } from "@shared/schema";
+import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema, insertPropertyAvailabilitySchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
 // Extend session type for admin authentication
@@ -229,6 +229,67 @@ export async function registerRoutes(
       res.json(commissions);
     } catch (error) {
       console.error("Error fetching commissions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== PROPERTY AVAILABILITY ROUTES =====
+  app.get("/api/property-availability", async (req, res) => {
+    try {
+      const availability = await storage.getAllPropertyAvailability();
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching property availability:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/property-availability/:propertyId", async (req, res) => {
+    try {
+      const availability = await storage.getPropertyAvailability(parseInt(req.params.propertyId));
+      res.json(availability);
+    } catch (error) {
+      console.error("Error fetching property availability:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/property-availability", async (req, res) => {
+    try {
+      const result = insertPropertyAvailabilitySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: fromZodError(result.error).toString() 
+        });
+      }
+      const availability = await storage.createPropertyAvailability(result.data);
+      res.status(201).json(availability);
+    } catch (error) {
+      console.error("Error creating property availability:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/property-availability/:id", async (req, res) => {
+    try {
+      const availability = await storage.updatePropertyAvailability(parseInt(req.params.id), req.body);
+      if (!availability) {
+        return res.status(404).json({ message: "Availability record not found" });
+      }
+      res.json(availability);
+    } catch (error) {
+      console.error("Error updating property availability:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/property-availability/:id", async (req, res) => {
+    try {
+      await storage.deletePropertyAvailability(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting property availability:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

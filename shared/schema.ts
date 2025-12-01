@@ -161,3 +161,22 @@ export const insertSalesCommissionSchema = createInsertSchema(salesCommissions).
 });
 export type InsertSalesCommission = z.infer<typeof insertSalesCommissionSchema>;
 export type SalesCommission = typeof salesCommissions.$inferSelect;
+
+// Property Availability Table (for rental calendar)
+export const propertyAvailability = pgTable("property_availability", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").notNull().references(() => properties.id),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isAvailable: integer("is_available").notNull().default(1), // 1 = available, 0 = unavailable/booked
+  bookingId: integer("booking_id").references(() => bookings.id), // link to booking if unavailable due to booking
+  notes: text("notes"), // optional notes (e.g., "owner blocked", "maintenance")
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPropertyAvailabilitySchema = createInsertSchema(propertyAvailability).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertPropertyAvailability = z.infer<typeof insertPropertyAvailabilitySchema>;
+export type PropertyAvailability = typeof propertyAvailability.$inferSelect;

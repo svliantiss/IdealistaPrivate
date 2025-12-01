@@ -13,13 +13,16 @@ import {
   type InsertSalesTransaction,
   type SalesCommission,
   type InsertSalesCommission,
+  type PropertyAvailability,
+  type InsertPropertyAvailability,
   agents,
   properties,
   bookings,
   commissions,
   salesProperties,
   salesTransactions,
-  salesCommissions
+  salesCommissions,
+  propertyAvailability
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or } from "drizzle-orm";
@@ -83,6 +86,13 @@ export interface IStorage {
   // Sales Commission methods
   getSalesCommissionsByAgent(agentId: number): Promise<SalesCommission[]>;
   createSalesCommission(commission: InsertSalesCommission): Promise<SalesCommission>;
+
+  // Property Availability methods
+  getPropertyAvailability(propertyId: number): Promise<PropertyAvailability[]>;
+  getAllPropertyAvailability(): Promise<PropertyAvailability[]>;
+  createPropertyAvailability(availability: InsertPropertyAvailability): Promise<PropertyAvailability>;
+  updatePropertyAvailability(id: number, availability: Partial<InsertPropertyAvailability>): Promise<PropertyAvailability | undefined>;
+  deletePropertyAvailability(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -330,6 +340,33 @@ export class DatabaseStorage implements IStorage {
   async createSalesCommission(commission: InsertSalesCommission): Promise<SalesCommission> {
     const [result] = await db.insert(salesCommissions).values(commission).returning();
     return result;
+  }
+
+  // Property Availability methods
+  async getPropertyAvailability(propertyId: number): Promise<PropertyAvailability[]> {
+    return await db.select().from(propertyAvailability).where(eq(propertyAvailability.propertyId, propertyId));
+  }
+
+  async getAllPropertyAvailability(): Promise<PropertyAvailability[]> {
+    return await db.select().from(propertyAvailability);
+  }
+
+  async createPropertyAvailability(availability: InsertPropertyAvailability): Promise<PropertyAvailability> {
+    const [result] = await db.insert(propertyAvailability).values(availability).returning();
+    return result;
+  }
+
+  async updatePropertyAvailability(id: number, availability: Partial<InsertPropertyAvailability>): Promise<PropertyAvailability | undefined> {
+    const [updated] = await db
+      .update(propertyAvailability)
+      .set(availability)
+      .where(eq(propertyAvailability.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePropertyAvailability(id: number): Promise<void> {
+    await db.delete(propertyAvailability).where(eq(propertyAvailability.id, id));
   }
 }
 

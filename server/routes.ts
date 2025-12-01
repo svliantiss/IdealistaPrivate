@@ -141,6 +141,9 @@ export async function registerRoutes(
   // ===== BOOKING ROUTES =====
   app.get("/api/bookings", async (req, res) => {
     try {
+      // Auto-archive past bookings before fetching
+      await storage.archivePastBookings();
+      
       const { agentId } = req.query;
       let bookings;
       if (agentId) {

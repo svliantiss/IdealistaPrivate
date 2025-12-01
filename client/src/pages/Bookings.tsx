@@ -21,7 +21,8 @@ import {
   Filter,
   CalendarDays,
   ClipboardList,
-  Inbox
+  Inbox,
+  Archive
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -139,20 +140,35 @@ export default function Bookings() {
     agencyAgentIds.includes(booking.bookingAgentId)
   );
 
-  // Apply filters to my bookings
-  const filteredMyBookings = myBookings.filter((booking: any) => {
+  // Helper to get date-only string (YYYY-MM-DD) for timezone-agnostic comparison
+  const getDateString = (dateStr: string | Date) => {
+    // For date input values (YYYY-MM-DD format), use directly
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    // For ISO timestamps, extract the date portion
+    const isoStr = new Date(dateStr).toISOString();
+    return isoStr.split('T')[0];
+  };
+
+  // Split my bookings into active and archived
+  const activeMyBookings = myBookings.filter((booking: any) => booking.status !== 'archived');
+  const archivedMyBookings = myBookings.filter((booking: any) => booking.status === 'archived');
+
+  // Apply filters to active bookings
+  const filteredMyBookings = activeMyBookings.filter((booking: any) => {
     if (statusFilter !== "all" && booking.status !== statusFilter) return false;
     
     if (dateFrom) {
-      const bookingDate = new Date(booking.checkIn);
-      const filterDate = new Date(dateFrom);
-      if (bookingDate < filterDate) return false;
+      const bookingCheckIn = getDateString(booking.checkIn);
+      // Check-in should be on or after the from date
+      if (bookingCheckIn < dateFrom) return false;
     }
     
     if (dateTo) {
-      const bookingDate = new Date(booking.checkOut);
-      const filterDate = new Date(dateTo);
-      if (bookingDate > filterDate) return false;
+      const bookingCheckOut = getDateString(booking.checkOut);
+      // Check-out should be on or before the to date
+      if (bookingCheckOut > dateTo) return false;
     }
     
     return true;
@@ -201,6 +217,7 @@ export default function Bookings() {
       case 'paid': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'cancellation_requested': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'cancelled': return 'bg-red-50 text-red-700 border-red-200';
+      case 'archived': return 'bg-slate-100 text-slate-600 border-slate-300';
       default: return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
@@ -239,7 +256,7 @@ export default function Bookings() {
         </div>
 
         <Tabs defaultValue="my-bookings" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="my-bookings" className="flex items-center gap-2" data-testid="tab-my-bookings">
               <ClipboardList className="h-4 w-4" />
               My Bookings
@@ -255,6 +272,15 @@ export default function Bookings() {
               {bookingRequests.length > 0 && (
                 <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
                   {bookingRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="flex items-center gap-2" data-testid="tab-archive">
+              <Archive className="h-4 w-4" />
+              Archive
+              {archivedMyBookings.length > 0 && (
+                <Badge variant="outline" className="ml-1 h-5 px-1.5 text-xs">
+                  {archivedMyBookings.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -611,6 +637,99 @@ export default function Bookings() {
                               </Button>
                             </>
                           )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Archive Tab */}
+          <TabsContent value="archive" className="mt-6">
+            {archivedMyBookings.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Archived Bookings</h3>
+                  <p className="text-muted-foreground">
+                    Completed bookings with past dates will appear here automatically.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {archivedMyBookings.map((booking: any) => {
+                  const property = getProperty(booking.propertyId);
+                  const ownerAgent = getAgent(booking.ownerAgentId);
+                  const nights = calculateNights(booking.checkIn, booking.checkOut);
+
+                  return (
+                    <Card key={booking.id} className="overflow-hidden bg-slate-50/50" data-testid={`archived-card-${booking.id}`}>
+                      <div className="grid md:grid-cols-5 gap-4 p-4">
+                        {/* Property Info */}
+                        <div className="md:col-span-2 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="text-xs font-mono text-muted-foreground">BK-{booking.id}</span>
+                              <Link href={`/rentals/${booking.propertyId}`}>
+                                <h3 className="font-semibold text-primary hover:underline cursor-pointer">
+                                  {property?.title || 'Property'}
+                                </h3>
+                              </Link>
+                              <div className="flex items-center text-muted-foreground text-sm mt-1">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                <span>{property?.location || 'Unknown'}</span>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className={getStatusBadgeClass('archived')}>
+                              Archived
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Dates & Amount */}
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Check-in</p>
+                              <p className="text-sm font-medium">{formatDate(booking.checkIn)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Check-out</p>
+                              <p className="text-sm font-medium">{formatDate(booking.checkOut)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="text-muted-foreground">{nights} nights</span>
+                            <span className="font-semibold text-primary flex items-center">
+                              <Euro className="h-3 w-3 mr-0.5" />
+                              {parseFloat(booking.totalAmount).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Client */}
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" /> Client
+                          </p>
+                          <p className="text-sm font-medium">{booking.clientName}</p>
+                          <p className="text-xs text-muted-foreground">{booking.clientEmail}</p>
+                        </div>
+
+                        {/* Owner */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary text-xs font-bold">
+                              {ownerAgent?.name?.charAt(0) || 'A'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium">{ownerAgent?.name}</p>
+                              <p className="text-xs text-muted-foreground">{ownerAgent?.agency}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </Card>

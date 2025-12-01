@@ -59,7 +59,7 @@ export const bookings = pgTable("bookings", {
   checkIn: timestamp("check_in").notNull(),
   checkOut: timestamp("check_out").notNull(),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // pending, confirmed, paid, cancelled
+  status: text("status").notNull().default("pending"), // pending, confirmed, paid, cancelled, cancellation_requested, archived
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

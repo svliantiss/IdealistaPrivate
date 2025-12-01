@@ -57,6 +57,7 @@ export interface IStorage {
   getAllBookings(): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: number, status: string): Promise<Booking | undefined>;
+  archivePastBookings(): Promise<number>;
   
   // Commission methods
   getCommissionByBooking(bookingId: number): Promise<Commission | undefined>;
@@ -219,6 +220,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async archivePastBookings(): Promise<number> {
+    const now = new Date();
+    const allBookings = await db.select().from(bookings);
+    let archivedCount = 0;
+    
+    for (const booking of allBookings) {
+      const checkOutDate = new Date(booking.checkOut);
+      const isPast = checkOutDate < now;
+      const shouldArchive = isPast && ['pending', 'confirmed', 'paid'].includes(booking.status);
+      
+      if (shouldArchive) {
+        await db.update(bookings)
+          .set({ status: 'archived' })
+          .where(eq(bookings.id, booking.id));
+        archivedCount++;
+      }
+    }
+    
+    return archivedCount;
   }
 
   // Commission methods

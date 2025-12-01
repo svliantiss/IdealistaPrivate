@@ -63,7 +63,7 @@ export default function Properties() {
       <div className="p-8 space-y-6">
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-primary">My Inventory</h1>
+            <h1 className="text-3xl font-serif font-bold text-primary">My Rentals</h1>
             <p className="text-muted-foreground mt-1">Manage your listings and availability.</p>
           </div>
           <Button className="bg-secondary hover:bg-secondary/90 text-white" data-testid="button-add-property">

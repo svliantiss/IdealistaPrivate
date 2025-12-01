@@ -32,7 +32,7 @@ export function Sidebar() {
 
   const bottomNavItems = [
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
-    { icon: Search, label: "Find Rentals", href: "/search" },
+    { icon: Search, label: "Find House", href: "/search" },
   ];
 
   const isPropertiesActive = location === "/properties" || location === "/sales";

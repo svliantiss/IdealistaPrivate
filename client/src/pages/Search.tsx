@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Select, 
   SelectContent, 
@@ -15,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X, Building2, Home } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -30,6 +31,7 @@ interface AmenityFilter {
 
 export default function Search() {
   const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState("rentals");
   const [searchLocation, setSearchLocation] = useState("");
   const [propertyType, setPropertyType] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -128,7 +130,7 @@ export default function Search() {
     setMaxPrice("");
   };
   
-  const { data: properties = [], isLoading } = useQuery<any[]>({
+  const { data: rentalProperties = [], isLoading: rentalsLoading } = useQuery<any[]>({
     queryKey: ['/api/properties', { location: searchLocation, propertyType: propertyType === 'all' ? undefined : propertyType, status: 'active' }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -142,6 +144,15 @@ export default function Search() {
     },
   });
 
+  const { data: salesProperties = [], isLoading: salesLoading } = useQuery<any[]>({
+    queryKey: ['/api/sales-properties', { status: 'active' }],
+    queryFn: async () => {
+      const response = await fetch('/api/sales-properties?status=active');
+      if (!response.ok) throw new Error('Failed to fetch sales properties');
+      return response.json();
+    },
+  });
+
   const { data: availabilities = [] } = useQuery<any[]>({
     queryKey: ['/api/property-availability'],
     queryFn: async () => {
@@ -151,8 +162,17 @@ export default function Search() {
     },
   });
 
-  const filteredProperties = useMemo(() => {
-    return properties.filter((property: any) => {
+  const { data: agents = [] } = useQuery<any[]>({
+    queryKey: ['/api/agents'],
+  });
+
+  const getAgentName = (agentId: number) => {
+    const agent = agents.find((a: any) => a.id === agentId);
+    return agent?.name || 'Unknown Agent';
+  };
+
+  const filteredRentalProperties = useMemo(() => {
+    return rentalProperties.filter((property: any) => {
       if (minBeds !== "any" && property.beds < parseInt(minBeds)) return false;
       if (minBaths !== "any" && property.baths < parseInt(minBaths)) return false;
       if (minPrice && parseFloat(property.price) < parseFloat(minPrice)) return false;
@@ -180,7 +200,19 @@ export default function Search() {
       
       return true;
     });
-  }, [properties, minBeds, minBaths, minPrice, maxPrice, amenityFilters]);
+  }, [rentalProperties, minBeds, minBaths, minPrice, maxPrice, amenityFilters]);
+
+  const filteredSalesProperties = useMemo(() => {
+    return salesProperties.filter((property: any) => {
+      if (searchLocation && !property.location.toLowerCase().includes(searchLocation.toLowerCase())) return false;
+      if (propertyType !== 'all' && property.propertyType !== propertyType) return false;
+      if (minBeds !== "any" && property.beds < parseInt(minBeds)) return false;
+      if (minBaths !== "any" && property.baths < parseInt(minBaths)) return false;
+      if (minPrice && parseFloat(property.price) < parseFloat(minPrice)) return false;
+      if (maxPrice && parseFloat(property.price) > parseFloat(maxPrice)) return false;
+      return true;
+    });
+  }, [salesProperties, searchLocation, propertyType, minBeds, minBaths, minPrice, maxPrice]);
 
   const getPropertyAvailability = (propertyId: number) => {
     return availabilities.filter((a: any) => a.propertyId === propertyId);
@@ -189,8 +221,23 @@ export default function Search() {
   return (
     <Layout>
       <div className="flex h-[calc(100vh-64px)] flex-col">
-        {/* Search Header */}
         <div className="bg-white border-b border-border p-6 shadow-sm z-10 sticky top-0">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-serif font-bold text-primary">Find House</h1>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="rentals" className="flex items-center gap-2" data-testid="tab-rentals">
+                  <Building2 className="h-4 w-4" />
+                  Find Rentals
+                </TabsTrigger>
+                <TabsTrigger value="buy" className="flex items-center gap-2" data-testid="tab-buy">
+                  <Home className="h-4 w-4" />
+                  To Buy
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
               <div className="relative">
@@ -207,33 +254,37 @@ export default function Search() {
                 </div>
               </div>
               
-              <div className="relative">
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Check-in</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="date" 
-                    className="pl-9 bg-slate-50 border-slate-200" 
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    data-testid="input-checkin" 
-                  />
-                </div>
-              </div>
+              {activeTab === "rentals" && (
+                <>
+                  <div className="relative">
+                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Check-in</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        type="date" 
+                        className="pl-9 bg-slate-50 border-slate-200" 
+                        value={checkInDate}
+                        onChange={(e) => setCheckInDate(e.target.value)}
+                        data-testid="input-checkin" 
+                      />
+                    </div>
+                  </div>
 
-              <div className="relative">
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Check-out</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="date" 
-                    className="pl-9 bg-slate-50 border-slate-200" 
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    data-testid="input-checkout" 
-                  />
-                </div>
-              </div>
+                  <div className="relative">
+                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Check-out</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        type="date" 
+                        className="pl-9 bg-slate-50 border-slate-200" 
+                        value={checkOutDate}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        data-testid="input-checkout" 
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="relative">
                 <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Type</label>
@@ -258,7 +309,6 @@ export default function Search() {
             </div>
           </div>
           
-          {/* More Filters Button */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
             <div className="mt-4 flex items-center gap-2 flex-wrap">
               <CollapsibleTrigger asChild>
@@ -297,13 +347,14 @@ export default function Search() {
               )}
 
               <div className="ml-auto text-sm text-muted-foreground">
-                Found <strong data-testid="text-result-count">{filteredProperties.length}</strong> results
+                Found <strong data-testid="text-result-count">
+                  {activeTab === "rentals" ? filteredRentalProperties.length : filteredSalesProperties.length}
+                </strong> results
               </div>
             </div>
 
             <CollapsibleContent className="mt-4">
               <div className="bg-slate-50 rounded-lg p-6 border border-slate-200 space-y-6">
-                {/* Beds & Baths */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Min Beds</label>
@@ -337,7 +388,9 @@ export default function Search() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Min Price/Night</label>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                      {activeTab === "rentals" ? "Min Price/Night" : "Min Price"}
+                    </label>
                     <Input 
                       type="number" 
                       placeholder="€0" 
@@ -348,10 +401,12 @@ export default function Search() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Max Price/Night</label>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                      {activeTab === "rentals" ? "Max Price/Night" : "Max Price"}
+                    </label>
                     <Input 
                       type="number" 
-                      placeholder="€1000" 
+                      placeholder={activeTab === "rentals" ? "€1000" : "€2000000"} 
                       className="bg-white"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
@@ -360,77 +415,190 @@ export default function Search() {
                   </div>
                 </div>
 
-                {/* Amenities Grid */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wider">Amenities</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {amenityFilters.map((filter) => (
-                      <div key={filter.id} className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={filter.id} 
-                            checked={filter.checked}
-                            onCheckedChange={() => toggleAmenity(filter.id)}
-                            data-testid={`checkbox-${filter.id}`}
-                          />
-                          <label 
-                            htmlFor={filter.id} 
-                            className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {filter.label}
-                          </label>
-                        </div>
-                        
-                        {filter.checked && filter.subFilters && (
-                          <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-3">
-                            {filter.subFilters.map((subFilter) => (
-                              <div key={subFilter.id} className="flex items-center space-x-2">
-                                <Checkbox 
-                                  id={subFilter.id} 
-                                  checked={subFilter.checked}
-                                  onCheckedChange={() => toggleAmenity(subFilter.id, true, filter.id)}
-                                  data-testid={`checkbox-${subFilter.id}`}
-                                />
-                                <label 
-                                  htmlFor={subFilter.id} 
-                                  className="text-sm text-muted-foreground leading-none cursor-pointer"
-                                >
-                                  {subFilter.label}
-                                </label>
-                              </div>
-                            ))}
+                {activeTab === "rentals" && (
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wider">Amenities</label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {amenityFilters.map((filter) => (
+                        <div key={filter.id} className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={filter.id} 
+                              checked={filter.checked}
+                              onCheckedChange={() => toggleAmenity(filter.id)}
+                              data-testid={`checkbox-${filter.id}`}
+                            />
+                            <label 
+                              htmlFor={filter.id} 
+                              className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {filter.label}
+                            </label>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          
+                          {filter.checked && filter.subFilters && (
+                            <div className="ml-6 space-y-2 border-l-2 border-primary/20 pl-3">
+                              {filter.subFilters.map((subFilter) => (
+                                <div key={subFilter.id} className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id={subFilter.id} 
+                                    checked={subFilter.checked}
+                                    onCheckedChange={() => toggleAmenity(subFilter.id, true, filter.id)}
+                                    data-testid={`checkbox-${subFilter.id}`}
+                                  />
+                                  <label 
+                                    htmlFor={subFilter.id} 
+                                    className="text-sm text-muted-foreground leading-none cursor-pointer"
+                                  >
+                                    {subFilter.label}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
         </div>
 
         <div className="flex-1 overflow-hidden flex">
-          {/* Main Content - Scrollable Grid */}
           <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
-            {isLoading ? (
-              <div className="text-center py-12">Loading properties...</div>
+            {activeTab === "rentals" ? (
+              rentalsLoading ? (
+                <div className="text-center py-12">Loading rental properties...</div>
+              ) : filteredRentalProperties.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">No rental properties found matching your criteria.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredRentalProperties.map((property: any) => {
+                    const propertyAvailability = getPropertyAvailability(property.id);
+                    const unavailableDates = propertyAvailability
+                      .filter((a: any) => !a.isAvailable)
+                      .map((a: any) => ({ start: a.startDate, end: a.endDate }));
+                    
+                    return (
+                      <div 
+                        key={property.id} 
+                        className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer" 
+                        data-testid={`card-rental-${property.id}`}
+                        onClick={() => navigate(`/rentals/${property.id}`)}
+                      >
+                        <div className="relative aspect-[4/3] overflow-hidden">
+                          <img 
+                            src={property.images?.[0] || '/placeholder.jpg'} 
+                            alt={property.title}
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 right-3 flex gap-2">
+                            <Button 
+                              size="icon" 
+                              variant="secondary" 
+                              className="h-8 w-8 rounded-full bg-white/90 text-slate-900 hover:bg-white hover:text-red-500 shadow-sm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Heart className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="absolute bottom-3 left-3 flex gap-2">
+                            <Badge className="bg-white/90 text-slate-900 hover:bg-white backdrop-blur-sm shadow-sm border-0 capitalize">
+                              {property.propertyType}
+                            </Badge>
+                            {unavailableDates.length > 0 && (
+                              <Badge className="bg-amber-500 text-white border-0">
+                                Some dates booked
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-5 flex flex-col flex-1">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent listing</div>
+                            <div className="flex items-center text-amber-500 text-xs font-bold">
+                              ★ 4.9
+                            </div>
+                          </div>
+                          
+                          <h3 className="font-serif text-lg font-bold text-primary mb-1 line-clamp-1 group-hover:text-secondary transition-colors" data-testid={`text-title-${property.id}`}>
+                            {property.title}
+                          </h3>
+                          <div className="flex items-center text-muted-foreground text-sm mb-3">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {property.location}
+                          </div>
+
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {(property.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
+                                {amenity}
+                              </Badge>
+                            ))}
+                            {(property.amenities || []).length > 4 && (
+                              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
+                                +{property.amenities.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.beds}</span> <span className="text-muted-foreground text-xs">Beds</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.baths}</span> <span className="text-muted-foreground text-xs">Baths</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold">{property.sqm}</span> <span className="text-muted-foreground text-xs">m²</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                            <div>
+                              <span className="text-xl font-bold text-primary" data-testid={`text-price-${property.id}`}>€{property.price}</span>
+                              <span className="text-muted-foreground text-sm">/night</span>
+                            </div>
+                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                              <PropertyAvailabilityDialog 
+                                propertyId={property.id} 
+                                propertyTitle={property.title} 
+                              />
+                              <Button variant="outline" size="sm" className="h-8 px-2">
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                className="h-8 bg-primary text-white hover:bg-primary/90" 
+                                data-testid={`button-details-${property.id}`}
+                                onClick={() => navigate(`/rentals/${property.id}`)}
+                              >
+                                Details
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredProperties.map((property: any) => {
-                  const propertyAvailability = getPropertyAvailability(property.id);
-                  const unavailableDates = propertyAvailability
-                    .filter((a: any) => !a.isAvailable)
-                    .map((a: any) => ({ start: a.startDate, end: a.endDate }));
-                  
-                  return (
+              salesLoading ? (
+                <div className="text-center py-12">Loading properties for sale...</div>
+              ) : filteredSalesProperties.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">No properties for sale found matching your criteria.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredSalesProperties.map((property: any) => (
                     <div 
                       key={property.id} 
                       className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer" 
-                      data-testid={`card-property-${property.id}`}
-                      onClick={() => navigate(`/rentals/${property.id}`)}
+                      data-testid={`card-sale-${property.id}`}
                     >
-                      {/* Image */}
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <img 
                           src={property.images?.[0] || '/placeholder.jpg'} 
@@ -448,27 +616,23 @@ export default function Search() {
                           </Button>
                         </div>
                         <div className="absolute bottom-3 left-3 flex gap-2">
+                          <Badge className="bg-blue-500 text-white border-0">
+                            For Sale
+                          </Badge>
                           <Badge className="bg-white/90 text-slate-900 hover:bg-white backdrop-blur-sm shadow-sm border-0 capitalize">
                             {property.propertyType}
                           </Badge>
-                          {unavailableDates.length > 0 && (
-                            <Badge className="bg-amber-500 text-white border-0">
-                              Some dates booked
-                            </Badge>
-                          )}
                         </div>
                       </div>
 
-                      {/* Content */}
                       <div className="p-5 flex flex-col flex-1">
                         <div className="flex justify-between items-start mb-2">
-                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent listing</div>
-                          <div className="flex items-center text-amber-500 text-xs font-bold">
-                            ★ 4.9
+                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Listed by {getAgentName(property.agentId)}
                           </div>
                         </div>
                         
-                        <h3 className="font-serif text-lg font-bold text-primary mb-1 line-clamp-1 group-hover:text-secondary transition-colors" data-testid={`text-title-${property.id}`}>
+                        <h3 className="font-serif text-lg font-bold text-primary mb-1 line-clamp-1 group-hover:text-secondary transition-colors" data-testid={`text-sale-title-${property.id}`}>
                           {property.title}
                         </h3>
                         <div className="flex items-center text-muted-foreground text-sm mb-3">
@@ -476,7 +640,6 @@ export default function Search() {
                           {property.location}
                         </div>
 
-                        {/* Amenities preview */}
                         <div className="flex flex-wrap gap-1 mb-3">
                           {(property.amenities || []).slice(0, 4).map((amenity: string, i: number) => (
                             <Badge key={i} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50">
@@ -504,32 +667,28 @@ export default function Search() {
 
                         <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
                           <div>
-                            <span className="text-xl font-bold text-primary" data-testid={`text-price-${property.id}`}>€{property.price}</span>
-                            <span className="text-muted-foreground text-sm">/night</span>
+                            <span className="text-xl font-bold text-primary" data-testid={`text-sale-price-${property.id}`}>
+                              €{parseFloat(property.price).toLocaleString()}
+                            </span>
                           </div>
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <PropertyAvailabilityDialog 
-                              propertyId={property.id} 
-                              propertyTitle={property.title} 
-                            />
                             <Button variant="outline" size="sm" className="h-8 px-2">
                               <Share2 className="h-4 w-4" />
                             </Button>
                             <Button 
                               size="sm" 
                               className="h-8 bg-primary text-white hover:bg-primary/90" 
-                              data-testid={`button-details-${property.id}`}
-                              onClick={() => navigate(`/rentals/${property.id}`)}
+                              data-testid={`button-sale-details-${property.id}`}
                             >
-                              Details
+                              Contact Agent
                             </Button>
                           </div>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>

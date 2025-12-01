@@ -256,8 +256,8 @@ export async function registerRoutes(
         });
       }
       
-      // If booking is being cancelled and was confirmed/paid, free up the dates
-      if (status === "cancelled" && (existingBooking.status === "confirmed" || existingBooking.status === "paid")) {
+      // If booking is being cancelled and was confirmed/paid/cancellation_requested, free up the dates
+      if (status === "cancelled" && (existingBooking.status === "confirmed" || existingBooking.status === "paid" || existingBooking.status === "cancellation_requested")) {
         await storage.deletePropertyAvailabilityByDates(
           booking.propertyId,
           booking.checkIn,

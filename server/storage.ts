@@ -371,13 +371,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePropertyAvailabilityByDates(propertyId: number, startDate: Date, endDate: Date): Promise<void> {
-    await db.delete(propertyAvailability).where(
-      and(
-        eq(propertyAvailability.propertyId, propertyId),
-        eq(propertyAvailability.startDate, startDate),
-        eq(propertyAvailability.endDate, endDate)
-      )
+    const allAvailability = await db.select().from(propertyAvailability).where(
+      eq(propertyAvailability.propertyId, propertyId)
     );
+    
+    const targetStart = new Date(startDate).getTime();
+    const targetEnd = new Date(endDate).getTime();
+    
+    for (const record of allAvailability) {
+      const recordStart = new Date(record.startDate).getTime();
+      const recordEnd = new Date(record.endDate).getTime();
+      
+      // Delete if ranges overlap (recordStart <= targetEnd && recordEnd >= targetStart)
+      if (recordStart <= targetEnd && recordEnd >= targetStart) {
+        await db.delete(propertyAvailability).where(eq(propertyAvailability.id, record.id));
+      }
+    }
   }
 }
 

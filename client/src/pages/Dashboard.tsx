@@ -10,31 +10,12 @@ import {
   CreditCard, 
   Clock,
   Plus,
-  Search,
-  Home,
-  Sparkles,
-  MapPin,
-  Bed,
-  Bath,
-  Maximize2
+  Home
 } from "lucide-react";
 import { Link } from "wouter";
 
 const CURRENT_AGENT_ID = 1;
 
-const getPropertyOfTheDay = (properties: any[]): any => {
-  if (!properties || properties.length === 0) return null;
-  
-  // Use day of year to determine which property to show
-  const today = new Date();
-  const startOfYear = new Date(today.getFullYear(), 0, 0);
-  const diff = today.getTime() - startOfYear.getTime();
-  const dayOfYear = Math.floor(diff / (24 * 60 * 60 * 1000));
-  
-  // Use modulo to cycle through properties
-  const index = dayOfYear % properties.length;
-  return properties[index];
-};
 
 export default function Dashboard() {
   const { data: properties = [] } = useQuery<any[]>({
@@ -57,13 +38,6 @@ export default function Dashboard() {
     queryKey: [`/api/sales-commissions/agent/${CURRENT_AGENT_ID}`],
   });
 
-  // Fetch all properties for "Property of the Day"
-  const { data: allProperties = [] } = useQuery<any[]>({
-    queryKey: [`/api/sales-properties`],
-  });
-
-  const allListings = [...properties, ...allProperties];
-  const propertyOfTheDay = getPropertyOfTheDay(allListings);
 
   const activeListings = properties.filter((p: any) => p.status === 'active').length + salesProperties.filter((p: any) => p.status === 'active').length;
   const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
@@ -122,119 +96,39 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <Card className="col-span-2 shadow-sm border-border/50 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800 overflow-hidden">
-            <div className="relative">
-              {propertyOfTheDay?.images?.[0] && (
-                <img 
-                  src={propertyOfTheDay.images[0]} 
-                  alt={propertyOfTheDay.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
-                  data-testid="img-property-of-day"
-                />
-              )}
-              <div className="absolute top-3 left-3">
-                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-0 gap-1" data-testid="badge-property-of-day">
-                  <Sparkles className="h-3 w-3" />
-                  Property of the Day
-                </Badge>
-              </div>
-            </div>
-            <CardHeader>
-              <CardTitle className="font-serif text-xl" data-testid="text-property-title">{propertyOfTheDay?.title || 'Loading...'}</CardTitle>
-              <CardDescription className="flex items-center gap-1 text-sm" data-testid="text-property-location">
-                <MapPin className="h-4 w-4" />
-                {propertyOfTheDay?.location}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground line-clamp-2">{propertyOfTheDay?.description}</p>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Bed className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <p className="text-sm font-medium" data-testid="text-beds">{propertyOfTheDay?.beds}</p>
-                  <p className="text-xs text-muted-foreground">Beds</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Bath className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <p className="text-sm font-medium" data-testid="text-baths">{propertyOfTheDay?.baths}</p>
-                  <p className="text-xs text-muted-foreground">Baths</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Maximize2 className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <p className="text-sm font-medium" data-testid="text-sqm">{propertyOfTheDay?.sqm}</p>
-                  <p className="text-xs text-muted-foreground">m²</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-blue-600 mb-1" data-testid="text-property-price">€{parseFloat(propertyOfTheDay?.price || 0).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{propertyOfTheDay?.price > 10000 ? 'Sale' : 'Night'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-2 shadow-sm border-border/50">
-            <CardHeader>
-              <CardTitle className="font-serif">Recent Bookings</CardTitle>
-              <CardDescription>Latest bookings across your network.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {bookings.slice(0, 4).map((booking: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between border-b border-border/40 last:border-0 pb-4 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-medium text-muted-foreground text-sm">
-                        {booking.clientName?.charAt(0) || 'C'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {booking.clientName} <span className="text-muted-foreground font-normal">requested booking</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
-                        </p>
-                      </div>
+        <Card className="shadow-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="font-serif">Recent Bookings</CardTitle>
+            <CardDescription>Latest bookings across your network.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {bookings.slice(0, 4).map((booking: any, i: number) => (
+                <div key={i} className="flex items-center justify-between border-b border-border/40 last:border-0 pb-4 last:pb-0">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-medium text-muted-foreground text-sm">
+                      {booking.clientName?.charAt(0) || 'C'}
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium 
-                      ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 
-                        booking.status === 'confirmed' || booking.status === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
-                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                      {booking.status}
-                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {booking.clientName} <span className="text-muted-foreground font-normal">requested booking</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(booking.checkIn).toLocaleDateString()} - {new Date(booking.checkOut).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-border/50 bg-sidebar text-sidebar-foreground">
-            <CardHeader>
-              <CardTitle className="font-serif text-sidebar-primary-foreground">Quick Actions</CardTitle>
-              <CardDescription className="text-sidebar-foreground/70">Common tasks for today.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link href="/search">
-                <Button variant="secondary" className="w-full justify-start text-left mb-3 bg-sidebar-primary text-white hover:bg-sidebar-primary/90 border-0 cursor-pointer" data-testid="button-find-property">
-                  <Search className="mr-2 h-4 w-4" /> Find a Property for Client
-                </Button>
-              </Link>
-              <Link href="/properties">
-                <Button variant="outline" className="w-full justify-start text-left border-sidebar-border hover:bg-sidebar-accent hover:text-white bg-transparent text-sidebar-foreground cursor-pointer" data-testid="button-create-listing">
-                  <Plus className="mr-2 h-4 w-4" /> Create New Listing
-                </Button>
-              </Link>
-              <Button variant="outline" className="w-full justify-start text-left border-sidebar-border hover:bg-sidebar-accent hover:text-white bg-transparent text-sidebar-foreground cursor-pointer" data-testid="button-manage-clients">
-                <Users className="mr-2 h-4 w-4" /> Manage Clients
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium 
+                    ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 
+                      booking.status === 'confirmed' || booking.status === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
+                      'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
+                    {booking.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

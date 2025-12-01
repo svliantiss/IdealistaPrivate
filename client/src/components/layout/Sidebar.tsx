@@ -16,11 +16,11 @@ export function Sidebar() {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: Search, label: "Find Rentals", href: "/search" },
+    { icon: Users, label: "Team Stats", href: "/employee-stats" },
     { icon: Building2, label: "My Rentals", href: "/properties" },
     { icon: Home, label: "Sales", href: "/sales" },
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
-    { icon: Users, label: "Team Stats", href: "/employee-stats" },
+    { icon: Search, label: "Find Rentals", href: "/search" },
   ];
 
   return (

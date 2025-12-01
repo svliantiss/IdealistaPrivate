@@ -245,8 +245,8 @@ export default function PropertyDetails() {
       clientName,
       clientEmail,
       clientPhone,
-      checkIn: formatDate(checkInDate),
-      checkOut: formatDate(checkOutDate),
+      checkIn: checkInDate?.toISOString(),
+      checkOut: checkOutDate?.toISOString(),
       totalAmount: calculateTotal(),
       status: "confirmed",
     });

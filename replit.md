@@ -4,16 +4,22 @@
 
 RentNetAgents is a private professional network designed for real estate agents to collaborate on both rental and sales properties. The platform enables agents to list properties (rentals and sales), search inventory from other agents, manage bookings/transactions, track commissions, and includes an admin panel for user management. This is a B2B platform inspired by Idealista but focused on agent-to-agent collaboration rather than direct consumer access.
 
-## Recent Changes (Session: Interactive Booking Calendar & My Bookings)
+## Recent Changes (Session: Booking Archive & Date Filter Fix)
 
-- **Interactive Booking Calendar**: Property details page now has clickable calendar where first click sets check-in date, second click sets check-out date
-- **Booking Form Dialog**: When clicking "Book Now", a dialog appears with client name, email, phone fields
-- **Automatic Availability Updates**: When a booking is created, the calendar automatically marks those dates as booked
-- **My Bookings Page**: New page at `/my-bookings` showing all bookings made by the current agent (and agency for managers)
-- **Agency Contact Info**: Added agencyPhone and agencyEmail fields to agents table, displayed in Contact Agent dialog
-- **Agent Contact Dialog**: Contact Agent button now opens a dialog with agent and agency contact details
+- **Booking Archive System**: Bookings with past checkout dates are automatically archived
+- **Archive Tab**: New third tab in Bookings page showing archived/completed bookings
+- **Auto-Archive Logic**: Backend automatically archives pending/confirmed/paid bookings when checkout date passes
+- **Fixed Date Filter**: Date filter now uses timezone-agnostic ISO date string comparison for consistent results
+- **Status Badge Styling**: Added archived status badge with slate color scheme
 
-### Previous Session: Admin Panel & Sales Features
+### Previous Session: Interactive Booking Calendar & My Bookings
+- Interactive Booking Calendar with click-to-select check-in/check-out
+- Booking Form Dialog for client details
+- Automatic Availability Updates when bookings created
+- My Bookings Page showing agent's bookings
+- Agency Contact Info fields and dialog
+
+### Earlier Session: Admin Panel & Sales Features
 - Admin Authentication System with password protection (ADMIN_PASSWORD env var)
 - Admin Panel at `/admin` for managing agents
 - Sales Properties System with separate commission structure (4% total, split 48/48/4)

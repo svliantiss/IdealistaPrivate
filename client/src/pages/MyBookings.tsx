@@ -66,7 +66,7 @@ export default function MyBookings() {
 
   // Combine personal bookings with agency bookings (remove duplicates)
   const myBookings = currentAgent?.agency 
-    ? [...new Map([...bookings, ...agencyBookings].map(b => [b.id, b])).values()]
+    ? Array.from(new Map([...bookings, ...agencyBookings].map(b => [b.id, b])).values())
     : bookings;
   
   const agents = agencyAgents;

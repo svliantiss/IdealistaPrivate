@@ -4,14 +4,19 @@
 
 RentNetAgents is a private professional network designed for real estate agents to collaborate on both rental and sales properties. The platform enables agents to list properties (rentals and sales), search inventory from other agents, manage bookings/transactions, track commissions, and includes an admin panel for user management. This is a B2B platform inspired by Idealista but focused on agent-to-agent collaboration rather than direct consumer access.
 
-## Recent Changes (Session: Added Admin Panel & Sales Features)
+## Recent Changes (Session: Interactive Booking Calendar & My Bookings)
 
-- **Admin Authentication System**: Added secure admin login with password protection (ADMIN_PASSWORD env var)
-- **Admin Panel**: New page at `/admin` for managing agents (add/delete users)
-- **Sales Properties System**: Expanded platform to support property sales in addition to rentals
-- **Sales Transactions & Commissions**: Separate commission structure for sales (4% vs 10% for rentals, 1% platform fee vs 5%)
-- **Sales Page**: New frontend page at `/sales` for browsing and managing sales properties
-- **Navigation Updates**: Sidebar now includes Sales link, rebranded rental section as "Find Rentals" and "My Rentals"
+- **Interactive Booking Calendar**: Property details page now has clickable calendar where first click sets check-in date, second click sets check-out date
+- **Booking Form Dialog**: When clicking "Book Now", a dialog appears with client name, email, phone fields
+- **Automatic Availability Updates**: When a booking is created, the calendar automatically marks those dates as booked
+- **My Bookings Page**: New page at `/my-bookings` showing all bookings made by the current agent (and agency for managers)
+- **Agency Contact Info**: Added agencyPhone and agencyEmail fields to agents table, displayed in Contact Agent dialog
+- **Agent Contact Dialog**: Contact Agent button now opens a dialog with agent and agency contact details
+
+### Previous Session: Admin Panel & Sales Features
+- Admin Authentication System with password protection (ADMIN_PASSWORD env var)
+- Admin Panel at `/admin` for managing agents
+- Sales Properties System with separate commission structure (4% total, split 48/48/4)
 
 ## User Preferences
 

@@ -14,16 +14,31 @@ export default function PropertyDetails() {
 
   const { data: property, isLoading } = useQuery<any>({
     queryKey: [`/api/properties/${propertyId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${propertyId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
     enabled: propertyId > 0,
   });
 
   const { data: availability = [] } = useQuery<any[]>({
     queryKey: [`/api/property-availability/${propertyId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/property-availability/${propertyId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: propertyId > 0,
   });
 
   const { data: agent } = useQuery<any>({
     queryKey: [`/api/agents/${property?.agentId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/agents/${property?.agentId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
     enabled: !!property?.agentId,
   });
 

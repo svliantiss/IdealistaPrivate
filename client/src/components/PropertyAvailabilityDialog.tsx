@@ -21,6 +21,11 @@ export function PropertyAvailabilityDialog({ propertyId, propertyTitle }: Proper
 
   const { data: availability = [] } = useQuery<any[]>({
     queryKey: [`/api/property-availability/${propertyId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/property-availability/${propertyId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: open && propertyId > 0,
   });
 

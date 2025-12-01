@@ -15,14 +15,13 @@ export default function Sales() {
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
 
   const { data: properties = [], isLoading } = useQuery<any[]>({
-    queryKey: [`/api/sales-properties?status=active`],
-    queryFn: async () => {
-      const res = await fetch("/api/sales-properties?status=active");
-      return res.json();
-    },
+    queryKey: [`/api/agents/${CURRENT_AGENT_ID}/sales-properties`],
   });
 
-  const filteredProperties = properties.filter(p => {
+  // Filter to only show active sales properties (not sold)
+  const activeProperties = properties.filter((p: any) => p.status === 'active');
+
+  const filteredProperties = activeProperties.filter(p => {
     const matchesLocation = !searchLocation || p.location.toLowerCase().includes(searchLocation.toLowerCase());
     const matchesPrice = !maxPriceFilter || parseFloat(p.price) <= parseFloat(maxPriceFilter);
     return matchesLocation && matchesPrice;
@@ -34,8 +33,8 @@ export default function Sales() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-primary">Properties for Sale</h1>
-            <p className="text-muted-foreground mt-1">Browse and manage sales listings from agents</p>
+            <h1 className="text-3xl font-serif font-bold text-primary">My Properties for Sale</h1>
+            <p className="text-muted-foreground mt-1">Manage your active sales listings</p>
           </div>
           <Link href="/sales/add">
             <Button className="bg-secondary hover:bg-secondary/90 gap-2" data-testid="button-add-sales-property">

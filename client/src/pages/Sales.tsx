@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, DollarSign, Bed, Bath, Maximize2, Image as ImageIcon, Plus, Search } from "lucide-react";
+import { MapPin, Euro, Bed, Bath, Maximize2, Image as ImageIcon, Plus, Search } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 
@@ -133,7 +133,7 @@ export default function Sales() {
 
                   {/* Price */}
                   <div className="flex items-baseline gap-2 pt-2 border-t">
-                    <DollarSign className="h-5 w-5 text-emerald-600" />
+                    <Euro className="h-5 w-5 text-emerald-600" />
                     <span className="text-2xl font-bold text-primary" data-testid={`text-price-${property.id}`}>
                       €{parseFloat(property.price).toLocaleString('es-ES')}
                     </span>

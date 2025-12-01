@@ -35,7 +35,7 @@ export default function Bookings() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
-  const { data: currentAgent } = useQuery<any>({
+  const { data: currentAgent, isLoading: isLoadingAgent } = useQuery<any>({
     queryKey: [`/api/agents/${CURRENT_AGENT_ID}`],
     queryFn: async () => {
       const response = await fetch(`/api/agents/${CURRENT_AGENT_ID}`);
@@ -44,7 +44,7 @@ export default function Bookings() {
     },
   });
 
-  const { data: bookings = [], isLoading } = useQuery<any[]>({
+  const { data: bookings = [], isLoading: isLoadingBookings } = useQuery<any[]>({
     queryKey: ['/api/bookings'],
     queryFn: async () => {
       const response = await fetch('/api/bookings');
@@ -53,7 +53,7 @@ export default function Bookings() {
     },
   });
 
-  const { data: agents = [] } = useQuery<any[]>({
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<any[]>({
     queryKey: ['/api/agents'],
     queryFn: async () => {
       const response = await fetch('/api/agents');
@@ -62,7 +62,7 @@ export default function Bookings() {
     },
   });
 
-  const { data: properties = [] } = useQuery<any[]>({
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<any[]>({
     queryKey: ['/api/properties'],
     queryFn: async () => {
       const response = await fetch('/api/properties');
@@ -70,6 +70,8 @@ export default function Bookings() {
       return response.json();
     },
   });
+
+  const isLoading = isLoadingAgent || isLoadingBookings || isLoadingAgents || isLoadingProperties;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {

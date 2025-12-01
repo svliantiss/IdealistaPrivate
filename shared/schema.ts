@@ -63,7 +63,10 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertBookingSchema = createInsertSchema(bookings).omit({ 
+export const insertBookingSchema = createInsertSchema(bookings, {
+  checkIn: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
+  checkOut: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
+}).omit({ 
   id: true, 
   createdAt: true 
 });

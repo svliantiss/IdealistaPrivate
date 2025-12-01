@@ -10,6 +10,8 @@ export const agents = pgTable("agents", {
   email: text("email").notNull().unique(),
   agency: text("agency"),
   phone: text("phone"),
+  agencyPhone: text("agency_phone"),
+  agencyEmail: text("agency_email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

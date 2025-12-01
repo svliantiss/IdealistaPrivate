@@ -16,6 +16,8 @@ interface Agent {
   email: string;
   agency?: string;
   phone?: string;
+  agencyPhone?: string;
+  agencyEmail?: string;
 }
 
 interface AgentContactDialogProps {
@@ -98,6 +100,42 @@ export function AgentContactDialog({ agent }: AgentContactDialogProps) {
                     <p className="text-sm font-semibold" data-testid="dialog-agency-name">{agent.agency}</p>
                   </div>
                 </div>
+
+                {agent.agencyEmail && (
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-secondary/10 flex items-center justify-center">
+                      <Mail className="h-4 w-4 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium">Agency Email</p>
+                      <a 
+                        href={`mailto:${agent.agencyEmail}`} 
+                        className="text-sm font-medium text-secondary hover:underline"
+                        data-testid="dialog-agency-email"
+                      >
+                        {agent.agencyEmail}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {agent.agencyPhone && (
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-secondary/10 flex items-center justify-center">
+                      <Phone className="h-4 w-4 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-medium">Agency Phone</p>
+                      <a 
+                        href={`tel:${agent.agencyPhone}`} 
+                        className="text-sm font-medium text-secondary hover:underline"
+                        data-testid="dialog-agency-phone"
+                      >
+                        {agent.agencyPhone}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

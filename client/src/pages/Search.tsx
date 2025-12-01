@@ -18,6 +18,8 @@ import {
 import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { PropertyAvailabilityDialog } from "@/components/PropertyAvailabilityDialog";
 
 interface AmenityFilter {
   id: string;
@@ -27,7 +29,8 @@ interface AmenityFilter {
 }
 
 export default function Search() {
-  const [location, setLocation] = useState("");
+  const [, navigate] = useLocation();
+  const [searchLocation, setSearchLocation] = useState("");
   const [propertyType, setPropertyType] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minBeds, setMinBeds] = useState<string>("any");
@@ -126,10 +129,10 @@ export default function Search() {
   };
   
   const { data: properties = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/properties', { location, propertyType: propertyType === 'all' ? undefined : propertyType, status: 'active' }],
+    queryKey: ['/api/properties', { location: searchLocation, propertyType: propertyType === 'all' ? undefined : propertyType, status: 'active' }],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (location) params.append('location', location);
+      if (searchLocation) params.append('location', searchLocation);
       if (propertyType && propertyType !== 'all') params.append('propertyType', propertyType);
       params.append('status', 'active');
       
@@ -197,8 +200,8 @@ export default function Search() {
                   <Input 
                     placeholder="City, neighborhood..." 
                     className="pl-9 bg-slate-50 border-slate-200"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    value={searchLocation}
+                    onChange={(e) => setSearchLocation(e.target.value)}
                     data-testid="input-location"
                   />
                 </div>
@@ -421,7 +424,12 @@ export default function Search() {
                     .map((a: any) => ({ start: a.startDate, end: a.endDate }));
                   
                   return (
-                    <div key={property.id} className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden" data-testid={`card-property-${property.id}`}>
+                    <div 
+                      key={property.id} 
+                      className="group bg-white rounded-lg border border-border shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer" 
+                      data-testid={`card-property-${property.id}`}
+                      onClick={() => navigate(`/rentals/${property.id}`)}
+                    >
                       {/* Image */}
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <img 
@@ -430,7 +438,12 @@ export default function Search() {
                           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute top-3 right-3 flex gap-2">
-                          <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white/90 text-slate-900 hover:bg-white hover:text-red-500 shadow-sm">
+                          <Button 
+                            size="icon" 
+                            variant="secondary" 
+                            className="h-8 w-8 rounded-full bg-white/90 text-slate-900 hover:bg-white hover:text-red-500 shadow-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Heart className="h-4 w-4" />
                           </Button>
                         </div>
@@ -494,14 +507,20 @@ export default function Search() {
                             <span className="text-xl font-bold text-primary" data-testid={`text-price-${property.id}`}>€{property.price}</span>
                             <span className="text-muted-foreground text-sm">/night</span>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="h-8 px-2">
-                              <Calendar className="h-4 w-4" />
-                            </Button>
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <PropertyAvailabilityDialog 
+                              propertyId={property.id} 
+                              propertyTitle={property.title} 
+                            />
                             <Button variant="outline" size="sm" className="h-8 px-2">
                               <Share2 className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" className="h-8 bg-primary text-white hover:bg-primary/90" data-testid={`button-details-${property.id}`}>
+                            <Button 
+                              size="sm" 
+                              className="h-8 bg-primary text-white hover:bg-primary/90" 
+                              data-testid={`button-details-${property.id}`}
+                              onClick={() => navigate(`/rentals/${property.id}`)}
+                            >
                               Details
                             </Button>
                           </div>

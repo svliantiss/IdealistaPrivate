@@ -20,12 +20,14 @@ import RentalCommissions from "@/pages/RentalCommissions";
 import SalesCommissions from "@/pages/SalesCommissions";
 import EmployeeStats from "@/pages/EmployeeStats";
 import EmployeeDetail from "@/pages/EmployeeDetail";
+import PropertyDetails from "@/pages/PropertyDetails";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/search" component={Search} />
+      <Route path="/rentals/:id" component={PropertyDetails} />
       <Route path="/properties" component={Properties} />
       <Route path="/bookings" component={Bookings} />
       <Route path="/sales" component={Sales} />

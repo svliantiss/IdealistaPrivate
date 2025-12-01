@@ -2,8 +2,9 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, MoreHorizontal, Eye, Building } from "lucide-react";
+import { Plus, Edit, Trash2, MoreHorizontal, Eye, Building, Calendar } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,14 +14,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { PropertyAvailabilityDialog } from "@/components/PropertyAvailabilityDialog";
 
 const CURRENT_AGENT_ID = 1;
 
 export default function Properties() {
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   
   const { data: properties = [], isLoading } = useQuery<any[]>({
     queryKey: [`/api/agents/${CURRENT_AGENT_ID}/properties`],
+    queryFn: async () => {
+      const response = await fetch(`/api/agents/${CURRENT_AGENT_ID}/properties`);
+      if (!response.ok) return [];
+      return response.json();
+    },
   });
 
   const deletePropertyMutation = useMutation({
@@ -65,7 +73,12 @@ export default function Properties() {
 
         <div className="space-y-4">
           {properties.map((property: any) => (
-            <Card key={property.id} className="overflow-hidden hover:shadow-md transition-shadow" data-testid={`card-property-${property.id}`}>
+            <Card 
+              key={property.id} 
+              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" 
+              data-testid={`card-property-${property.id}`}
+              onClick={() => navigate(`/rentals/${property.id}`)}
+            >
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row">
                   <div className="w-full md:w-64 h-48 md:h-auto relative">
@@ -90,18 +103,28 @@ export default function Properties() {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-menu-${property.id}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8" 
+                              data-testid={`button-menu-${property.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem><Eye className="mr-2 h-4 w-4" /> View Public Page</DropdownMenuItem>
-                            <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /> Edit Listing</DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/rentals/${property.id}`); }}>
+                              <Eye className="mr-2 h-4 w-4" /> View Public Page
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/properties/${property.id}/edit`); }}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit Listing
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
-                              onClick={() => deletePropertyMutation.mutate(property.id)}
+                              onClick={(e) => { e.stopPropagation(); deletePropertyMutation.mutate(property.id); }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
@@ -129,9 +152,20 @@ export default function Properties() {
                       </div>
                     </div>
 
-                    <div className="mt-6 flex gap-3 justify-end">
-                      <Button variant="outline" size="sm">Calendar</Button>
-                      <Button variant="outline" size="sm">Edit Details</Button>
+                    <div className="mt-6 flex gap-3 justify-end" onClick={(e) => e.stopPropagation()}>
+                      <PropertyAvailabilityDialog 
+                        propertyId={property.id} 
+                        propertyTitle={property.title}
+                        showLabel={true}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/properties/${property.id}/edit`); }}
+                        data-testid={`button-edit-${property.id}`}
+                      >
+                        <Edit className="mr-2 h-4 w-4" /> Edit Details
+                      </Button>
                     </div>
                   </div>
                 </div>

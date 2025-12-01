@@ -13,9 +13,10 @@ import { useQuery } from "@tanstack/react-query";
 interface PropertyAvailabilityDialogProps {
   propertyId: number;
   propertyTitle: string;
+  showLabel?: boolean;
 }
 
-export function PropertyAvailabilityDialog({ propertyId, propertyTitle }: PropertyAvailabilityDialogProps) {
+export function PropertyAvailabilityDialog({ propertyId, propertyTitle, showLabel = false }: PropertyAvailabilityDialogProps) {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [open, setOpen] = useState(false);
 
@@ -96,10 +97,11 @@ export function PropertyAvailabilityDialog({ propertyId, propertyTitle }: Proper
         <Button 
           variant="outline" 
           size="sm" 
-          className="h-8 px-2"
+          className={showLabel ? "h-8" : "h-8 px-2"}
           data-testid={`button-calendar-${propertyId}`}
         >
-          <Calendar className="h-4 w-4" />
+          <Calendar className={showLabel ? "mr-2 h-4 w-4" : "h-4 w-4"} />
+          {showLabel && "Calendar"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

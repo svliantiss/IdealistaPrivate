@@ -21,6 +21,7 @@ import SalesCommissions from "@/pages/SalesCommissions";
 import EmployeeStats from "@/pages/EmployeeStats";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 import PropertyDetails from "@/pages/PropertyDetails";
+import EditProperty from "@/pages/EditProperty";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/rentals/:id" component={PropertyDetails} />
       <Route path="/properties" component={Properties} />
+      <Route path="/properties/:id/edit" component={EditProperty} />
       <Route path="/bookings" component={Bookings} />
       <Route path="/sales" component={Sales} />
       <Route path="/active-listings" component={ActiveListings} />

@@ -375,16 +375,19 @@ export class DatabaseStorage implements IStorage {
       eq(propertyAvailability.propertyId, propertyId)
     );
     
-    const targetStart = new Date(startDate).getTime();
-    const targetEnd = new Date(endDate).getTime();
+    // Normalize target dates to date-only strings for comparison
+    const targetStart = new Date(startDate).toISOString().split('T')[0];
+    const targetEnd = new Date(endDate).toISOString().split('T')[0];
     
     for (const record of allAvailability) {
-      const recordStart = new Date(record.startDate).getTime();
-      const recordEnd = new Date(record.endDate).getTime();
+      // Normalize record dates to date-only strings
+      const recordStart = new Date(record.startDate).toISOString().split('T')[0];
+      const recordEnd = new Date(record.endDate).toISOString().split('T')[0];
       
-      // Delete if ranges overlap (recordStart <= targetEnd && recordEnd >= targetStart)
-      if (recordStart <= targetEnd && recordEnd >= targetStart) {
+      // Only delete if exact date match (this availability was created specifically for this booking)
+      if (recordStart === targetStart && recordEnd === targetEnd) {
         await db.delete(propertyAvailability).where(eq(propertyAvailability.id, record.id));
+        break; // Found and deleted the specific record, no need to continue
       }
     }
   }

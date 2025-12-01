@@ -2,16 +2,30 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AgentContactDialog } from "@/components/AgentContactDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PropertyDetails() {
   const params = useParams<{ id: string }>();
   const propertyId = parseInt(params.id || "0");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [checkInDate, setCheckInDate] = useState<Date | null>(null);
+  const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: property, isLoading } = useQuery<any>({
     queryKey: [`/api/properties/${propertyId}`],
@@ -23,7 +37,7 @@ export default function PropertyDetails() {
     enabled: propertyId > 0,
   });
 
-  const { data: availability = [] } = useQuery<any[]>({
+  const { data: availability = [], refetch: refetchAvailability } = useQuery<any[]>({
     queryKey: [`/api/property-availability/${propertyId}`],
     queryFn: async () => {
       const response = await fetch(`/api/property-availability/${propertyId}`);
@@ -41,6 +55,43 @@ export default function PropertyDetails() {
       return response.json();
     },
     enabled: !!property?.agentId,
+  });
+
+  const createBookingMutation = useMutation({
+    mutationFn: async (bookingData: any) => {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create booking');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Created",
+        description: "The booking has been successfully created.",
+      });
+      setBookingDialogOpen(false);
+      setClientName("");
+      setClientEmail("");
+      setClientPhone("");
+      setNotes("");
+      setCheckInDate(null);
+      setCheckOutDate(null);
+      refetchAvailability();
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Booking Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const bookedDates = useMemo(() => {
@@ -63,6 +114,60 @@ export default function PropertyDetails() {
       d.getMonth() === date.getMonth() &&
       d.getDate() === date.getDate()
     );
+  };
+
+  const isPast = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
+  const isDateSelected = (date: Date) => {
+    if (!checkInDate) return false;
+    if (checkInDate && !checkOutDate) {
+      return date.getTime() === checkInDate.getTime();
+    }
+    if (checkInDate && checkOutDate) {
+      return date >= checkInDate && date <= checkOutDate;
+    }
+    return false;
+  };
+
+  const isCheckIn = (date: Date) => {
+    return checkInDate && date.getTime() === checkInDate.getTime();
+  };
+
+  const isCheckOut = (date: Date) => {
+    return checkOutDate && date.getTime() === checkOutDate.getTime();
+  };
+
+  const handleDateClick = (date: Date) => {
+    if (isPast(date) || isDateBooked(date)) return;
+
+    if (!checkInDate) {
+      setCheckInDate(date);
+      setCheckOutDate(null);
+    } else if (!checkOutDate) {
+      if (date > checkInDate) {
+        // Check if any dates in range are booked
+        const hasBookedDates = bookedDates.some(d => d > checkInDate && d <= date);
+        if (hasBookedDates) {
+          toast({
+            title: "Invalid Selection",
+            description: "Selected range includes booked dates. Please choose different dates.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setCheckOutDate(date);
+      } else {
+        setCheckInDate(date);
+        setCheckOutDate(null);
+      }
+    } else {
+      setCheckInDate(date);
+      setCheckOutDate(null);
+    }
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -89,6 +194,60 @@ export default function PropertyDetails() {
 
   const nextMonth = () => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1));
+  };
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return "";
+    return date.toISOString().split('T')[0];
+  };
+
+  const calculateNights = () => {
+    if (!checkInDate || !checkOutDate) return 0;
+    const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const calculateTotal = () => {
+    const nights = calculateNights();
+    const pricePerNight = parseFloat(property?.price || 0);
+    return (nights * pricePerNight).toFixed(2);
+  };
+
+  const handleBookNow = () => {
+    if (!checkInDate || !checkOutDate) {
+      toast({
+        title: "Select Dates",
+        description: "Please select check-in and check-out dates from the calendar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBookingDialogOpen(true);
+  };
+
+  const handleSubmitBooking = () => {
+    if (!clientName || !clientEmail || !clientPhone) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createBookingMutation.mutate({
+      propertyId,
+      ownerAgentId: property.agentId,
+      bookingAgentId: 1, // Current agent (hardcoded for now)
+      clientName,
+      clientEmail,
+      clientPhone,
+      checkIn: formatDate(checkInDate),
+      checkOut: formatDate(checkOutDate),
+      totalPrice: calculateTotal(),
+      status: "confirmed",
+      notes,
+    });
   };
 
   if (isLoading) {
@@ -198,7 +357,10 @@ export default function PropertyDetails() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-serif">Availability Calendar</CardTitle>
+                <div>
+                  <CardTitle className="font-serif">Availability Calendar</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Click to select check-in and check-out dates</p>
+                </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-300"></div>
@@ -207,6 +369,10 @@ export default function PropertyDetails() {
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
                     <span>Booked</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-primary border border-primary"></div>
+                    <span>Selected</span>
                   </div>
                 </div>
               </CardHeader>
@@ -232,18 +398,59 @@ export default function PropertyDetails() {
                   {getDaysInMonth(selectedMonth).map((date, i) => (
                     <div 
                       key={i} 
-                      className={`text-center py-2 rounded text-sm ${
+                      onClick={() => date && handleDateClick(date)}
+                      className={`text-center py-2 rounded text-sm transition-all ${
                         date 
-                          ? isDateBooked(date)
-                            ? 'bg-red-100 text-red-700 border border-red-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                          ? isPast(date)
+                            ? 'bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed'
+                            : isDateBooked(date)
+                              ? 'bg-red-100 text-red-700 border border-red-200 cursor-not-allowed'
+                              : isCheckIn(date) || isCheckOut(date)
+                                ? 'bg-primary text-white border border-primary cursor-pointer font-semibold'
+                                : isDateSelected(date)
+                                  ? 'bg-primary/20 text-primary border border-primary/30 cursor-pointer'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer'
                           : ''
                       }`}
+                      data-testid={date ? `calendar-date-${date.getDate()}` : undefined}
                     >
                       {date?.getDate() || ''}
                     </div>
                   ))}
                 </div>
+
+                {checkInDate && (
+                  <div className="mt-4 pt-4 border-t flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Check-in:</span>
+                      <Badge variant="outline" className="font-medium">
+                        {checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </Badge>
+                    </div>
+                    {checkOutDate && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Check-out:</span>
+                          <Badge variant="outline" className="font-medium">
+                            {checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Duration:</span>
+                          <Badge className="bg-primary">{calculateNights()} nights</Badge>
+                        </div>
+                      </>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => { setCheckInDate(null); setCheckOutDate(null); }}
+                      className="ml-auto"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -260,15 +467,48 @@ export default function PropertyDetails() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Check-in</label>
-                    <input type="date" className="w-full mt-1 px-3 py-2 border rounded-md text-sm" />
+                    <input 
+                      type="date" 
+                      className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+                      value={formatDate(checkInDate)}
+                      readOnly
+                      placeholder="Select from calendar"
+                      data-testid="input-checkin"
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Check-out</label>
-                    <input type="date" className="w-full mt-1 px-3 py-2 border rounded-md text-sm" />
+                    <input 
+                      type="date" 
+                      className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+                      value={formatDate(checkOutDate)}
+                      readOnly
+                      placeholder="Select from calendar"
+                      data-testid="input-checkout"
+                    />
                   </div>
                 </div>
+
+                {checkInDate && checkOutDate && (
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">€{property.price} x {calculateNights()} nights</span>
+                      <span>€{calculateTotal()}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t pt-2">
+                      <span>Total</span>
+                      <span className="text-primary">€{calculateTotal()}</span>
+                    </div>
+                  </div>
+                )}
                 
-                <Button className="w-full bg-primary text-white" size="lg" data-testid="button-book-now">
+                <Button 
+                  className="w-full bg-primary text-white" 
+                  size="lg" 
+                  onClick={handleBookNow}
+                  disabled={!checkInDate || !checkOutDate}
+                  data-testid="button-book-now"
+                >
                   Book Now
                 </Button>
                 
@@ -309,6 +549,109 @@ export default function PropertyDetails() {
           </div>
         </div>
       </div>
+
+      {/* Booking Dialog */}
+      <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">Complete Your Booking</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold">{property.title}</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Check-in:</span>
+                  <p className="font-medium">{checkInDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Check-out:</span>
+                  <p className="font-medium">{checkOutDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+              </div>
+              <div className="flex justify-between pt-2 border-t font-semibold">
+                <span>{calculateNights()} nights</span>
+                <span className="text-primary">€{calculateTotal()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Client Information
+              </h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="clientName">Full Name *</Label>
+                  <Input
+                    id="clientName"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Enter client's full name"
+                    data-testid="input-client-name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="clientEmail">Email Address *</Label>
+                  <Input
+                    id="clientEmail"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    data-testid="input-client-email"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="clientPhone">Phone Number *</Label>
+                  <Input
+                    id="clientPhone"
+                    type="tel"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="+34 600 000 000"
+                    data-testid="input-client-phone"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="notes">Additional Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Any special requests or notes..."
+                    rows={3}
+                    data-testid="input-notes"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setBookingDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-primary text-white"
+                onClick={handleSubmitBooking}
+                disabled={createBookingMutation.isPending}
+                data-testid="button-confirm-booking"
+              >
+                {createBookingMutation.isPending ? "Creating..." : "Confirm Booking"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

@@ -9,22 +9,50 @@ import { Link } from "wouter";
 const CURRENT_AGENT_ID = 1;
 
 export default function MyBookings() {
-  const { data: bookings = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/bookings'],
+  const { data: currentAgent } = useQuery<any>({
+    queryKey: [`/api/agents/${CURRENT_AGENT_ID}`],
     queryFn: async () => {
-      const response = await fetch('/api/bookings');
+      const response = await fetch(`/api/agents/${CURRENT_AGENT_ID}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+  });
+
+  // Fetch bookings filtered by agent
+  const { data: bookings = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/bookings', 'agent', CURRENT_AGENT_ID],
+    queryFn: async () => {
+      const response = await fetch(`/api/bookings?agentId=${CURRENT_AGENT_ID}`);
       if (!response.ok) return [];
       return response.json();
     },
   });
 
-  const { data: agents = [] } = useQuery<any[]>({
-    queryKey: ['/api/agents'],
+  // Fetch only agents from the same agency for manager view
+  const { data: agencyAgents = [] } = useQuery<any[]>({
+    queryKey: ['/api/agents', 'agency', currentAgent?.agency],
     queryFn: async () => {
+      if (!currentAgent?.agency) return [];
       const response = await fetch('/api/agents');
       if (!response.ok) return [];
-      return response.json();
+      const allAgents = await response.json();
+      return allAgents.filter((a: any) => a.agency === currentAgent.agency);
     },
+    enabled: !!currentAgent?.agency,
+  });
+
+  // Fetch agency bookings for managers (bookings made by same-agency agents)
+  const { data: agencyBookings = [] } = useQuery<any[]>({
+    queryKey: ['/api/bookings', 'agency', currentAgent?.agency],
+    queryFn: async () => {
+      if (!currentAgent?.agency || agencyAgents.length === 0) return [];
+      const response = await fetch('/api/bookings');
+      if (!response.ok) return [];
+      const allBookings = await response.json();
+      const agencyAgentIds = agencyAgents.map((a: any) => a.id);
+      return allBookings.filter((b: any) => agencyAgentIds.includes(b.bookingAgentId));
+    },
+    enabled: !!currentAgent?.agency && agencyAgents.length > 0,
   });
 
   const { data: properties = [] } = useQuery<any[]>({
@@ -36,29 +64,12 @@ export default function MyBookings() {
     },
   });
 
-  const { data: currentAgent } = useQuery<any>({
-    queryKey: [`/api/agents/${CURRENT_AGENT_ID}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/agents/${CURRENT_AGENT_ID}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-  });
-
-  // Filter bookings: show all bookings made by agents from the same agency (for managers)
-  // or just the current agent's bookings
-  const myBookings = bookings.filter((booking: any) => {
-    // Show bookings where this agent made the booking
-    if (booking.bookingAgentId === CURRENT_AGENT_ID) return true;
-    
-    // For managers: show all bookings from same agency
-    if (currentAgent?.agency) {
-      const bookingAgent = agents.find((a: any) => a.id === booking.bookingAgentId);
-      if (bookingAgent?.agency === currentAgent.agency) return true;
-    }
-    
-    return false;
-  });
+  // Combine personal bookings with agency bookings (remove duplicates)
+  const myBookings = currentAgent?.agency 
+    ? [...new Map([...bookings, ...agencyBookings].map(b => [b.id, b])).values()]
+    : bookings;
+  
+  const agents = agencyAgents;
 
   const getAgent = (agentId: number) => agents.find((a: any) => a.id === agentId);
   const getProperty = (propertyId: number) => properties.find((p: any) => p.id === propertyId);

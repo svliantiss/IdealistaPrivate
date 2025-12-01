@@ -8,7 +8,8 @@ import {
   Home,
   Users,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  Inbox
 } from "lucide-react";
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
 
@@ -22,6 +23,7 @@ export function Sidebar() {
     { icon: Home, label: "Sales", href: "/sales" },
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
     { icon: ClipboardList, label: "My Bookings", href: "/my-bookings" },
+    { icon: Inbox, label: "Booking Requests", href: "/booking-requests" },
     { icon: Search, label: "Find Rentals", href: "/search" },
   ];
 

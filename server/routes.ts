@@ -177,7 +177,20 @@ export async function registerRoutes(
           errors: fromZodError(result.error).toString() 
         });
       }
-      const booking = await storage.createBooking(result.data);
+
+      // Get booking agent and owner agent to check if same agency
+      const bookingAgent = await storage.getAgent(result.data.bookingAgentId);
+      const ownerAgent = await storage.getAgent(result.data.ownerAgentId);
+      
+      // Auto-confirm if same agency, otherwise pending
+      const isSameAgency = bookingAgent?.agency && ownerAgent?.agency && 
+                           bookingAgent.agency === ownerAgent.agency;
+      const bookingStatus = isSameAgency ? "confirmed" : "pending";
+      
+      const booking = await storage.createBooking({
+        ...result.data,
+        status: bookingStatus,
+      });
       
       // Auto-create commission record (20% commission pool split 48/48/4)
       const totalAmount = parseFloat(booking.totalAmount);
@@ -198,13 +211,15 @@ export async function registerRoutes(
         status: "pending",
       });
 
-      // Mark dates as booked in property availability
-      await storage.createPropertyAvailability({
-        propertyId: booking.propertyId,
-        startDate: booking.checkIn,
-        endDate: booking.checkOut,
-        isAvailable: 0, // 0 = booked
-      });
+      // Mark dates as booked in property availability (only if confirmed)
+      if (bookingStatus === "confirmed") {
+        await storage.createPropertyAvailability({
+          propertyId: booking.propertyId,
+          startDate: booking.checkIn,
+          endDate: booking.checkOut,
+          isAvailable: 0, // 0 = booked
+        });
+      }
       
       res.status(201).json(booking);
     } catch (error) {
@@ -219,10 +234,28 @@ export async function registerRoutes(
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
+      
+      // Get the booking before updating to check previous status
+      const existingBooking = await storage.getBooking(parseInt(req.params.id));
+      if (!existingBooking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
       const booking = await storage.updateBookingStatus(parseInt(req.params.id), status);
       if (!booking) {
         return res.status(404).json({ message: "Booking not found" });
       }
+      
+      // If booking is being confirmed (approved), mark dates as booked
+      if (status === "confirmed" && existingBooking.status === "pending") {
+        await storage.createPropertyAvailability({
+          propertyId: booking.propertyId,
+          startDate: booking.checkIn,
+          endDate: booking.checkOut,
+          isAvailable: 0, // 0 = booked
+        });
+      }
+      
       res.json(booking);
     } catch (error) {
       console.error("Error updating booking status:", error);

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check } from "lucide-react";
 import { useState, useMemo } from "react";
+import { AgentContactDialog } from "@/components/AgentContactDialog";
 
 export default function PropertyDetails() {
   const params = useParams<{ id: string }>();
@@ -301,9 +302,7 @@ export default function PropertyDetails() {
                       <p className="text-sm text-muted-foreground" data-testid="text-agent-agency">{agent.agency}</p>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full mt-4" data-testid="button-contact-agent">
-                    Contact Agent
-                  </Button>
+                  <AgentContactDialog agent={agent} />
                 </CardContent>
               </Card>
             )}

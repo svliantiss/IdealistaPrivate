@@ -462,13 +462,13 @@ export default function Bookings() {
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    className="w-full border-amber-200 text-amber-600 hover:bg-amber-50 text-xs"
+                                    className="w-full border-amber-200 text-amber-600 hover:bg-amber-50 h-auto py-2 whitespace-normal text-xs"
                                     onClick={() => requestCancellationMutation.mutate(booking.id)}
                                     disabled={requestCancellationMutation.isPending}
                                     data-testid={`button-request-cancel-${booking.id}`}
                                   >
                                     <X className="h-3 w-3 mr-1 flex-shrink-0" />
-                                    <span className="truncate">Request Cancel</span>
+                                    Request Cancellation
                                   </Button>
                                 );
                               }

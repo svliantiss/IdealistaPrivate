@@ -133,7 +133,6 @@ export default function Sales() {
 
                   {/* Price */}
                   <div className="flex items-baseline gap-2 pt-2 border-t">
-                    <Euro className="h-5 w-5 text-emerald-600" />
                     <span className="text-2xl font-bold text-primary" data-testid={`text-price-${property.id}`}>
                       €{parseFloat(property.price).toLocaleString('es-ES')}
                     </span>

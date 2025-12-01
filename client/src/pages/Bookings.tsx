@@ -84,12 +84,12 @@ export default function Bookings() {
       return response.json();
     },
     onSuccess: (_, { status }) => {
-      toast({
-        title: status === 'confirmed' ? 'Booking Approved' : 'Booking Declined',
-        description: status === 'confirmed' 
-          ? 'The booking has been approved and dates are now blocked.'
-          : 'The booking request has been declined.',
-      });
+      const messages: Record<string, { title: string; description: string }> = {
+        confirmed: { title: 'Booking Approved', description: 'The booking has been approved and dates are now blocked.' },
+        cancelled: { title: 'Booking Cancelled', description: 'The booking has been cancelled and dates are now available.' },
+      };
+      const message = messages[status] || { title: 'Status Updated', description: 'The booking status has been updated.' };
+      toast(message);
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/property-availability'] });
     },
@@ -97,6 +97,31 @@ export default function Bookings() {
       toast({
         title: 'Error',
         description: 'Failed to update booking status.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const requestCancellationMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const response = await fetch(`/api/bookings/${bookingId}/request-cancellation`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to request cancellation');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Cancellation Requested',
+        description: 'Your cancellation request has been sent to the property owner.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to request cancellation.',
         variant: 'destructive',
       });
     },
@@ -133,9 +158,9 @@ export default function Bookings() {
     return true;
   });
 
-  // Booking Requests: pending bookings from other agencies for my properties
+  // Booking Requests: pending bookings and cancellation requests from other agencies for my properties
   const bookingRequests = bookings.filter((booking: any) => {
-    if (booking.status !== 'pending') return false;
+    if (booking.status !== 'pending' && booking.status !== 'cancellation_requested') return false;
     const isMyAgencyProperty = agencyAgentIds.includes(booking.ownerAgentId);
     if (!isMyAgencyProperty) return false;
     const bookingAgent = agents.find((a: any) => a.id === booking.bookingAgentId);
@@ -174,8 +199,16 @@ export default function Bookings() {
       case 'confirmed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'paid': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'cancellation_requested': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'cancelled': return 'bg-red-50 text-red-700 border-red-200';
       default: return 'bg-slate-50 text-slate-700 border-slate-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'cancellation_requested': return 'Cancel Requested';
+      default: return status;
     }
   };
 
@@ -239,7 +272,7 @@ export default function Bookings() {
                   </div>
                   
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[140px]" data-testid="filter-status">
+                    <SelectTrigger className="w-[180px]" data-testid="filter-status">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -247,6 +280,7 @@ export default function Bookings() {
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="confirmed">Confirmed</SelectItem>
                       <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="cancellation_requested">Cancel Requested</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
@@ -320,7 +354,7 @@ export default function Bookings() {
                               </div>
                             </div>
                             <Badge variant="outline" className={getStatusBadgeClass(booking.status)}>
-                              {booking.status}
+                              {getStatusLabel(booking.status)}
                             </Badge>
                           </div>
                         </div>
@@ -376,6 +410,45 @@ export default function Bookings() {
                             <Mail className="h-3 w-3 mr-2" />
                             Email Owner
                           </Button>
+                          {booking.status !== 'cancelled' && booking.status !== 'cancellation_requested' && (
+                            (() => {
+                              const isSameAgencyProperty = ownerAgent?.agency === currentAgent?.agency;
+                              if (isSameAgencyProperty) {
+                                return (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                                    onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                    disabled={updateStatusMutation.isPending}
+                                    data-testid={`button-cancel-${booking.id}`}
+                                  >
+                                    <X className="h-3 w-3 mr-2" />
+                                    Cancel Booking
+                                  </Button>
+                                );
+                              } else {
+                                return (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full border-amber-200 text-amber-600 hover:bg-amber-50"
+                                    onClick={() => requestCancellationMutation.mutate(booking.id)}
+                                    disabled={requestCancellationMutation.isPending}
+                                    data-testid={`button-request-cancel-${booking.id}`}
+                                  >
+                                    <X className="h-3 w-3 mr-2" />
+                                    Request Cancellation
+                                  </Button>
+                                );
+                              }
+                            })()
+                          )}
+                          {booking.status === 'cancellation_requested' && (
+                            <Badge variant="outline" className="w-full justify-center bg-amber-50 text-amber-700 border-amber-200">
+                              Cancellation Pending
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </Card>
@@ -405,7 +478,11 @@ export default function Bookings() {
                   const nights = calculateNights(booking.checkIn, booking.checkOut);
 
                   return (
-                    <Card key={booking.id} className="overflow-hidden border-amber-200 bg-amber-50/30" data-testid={`request-card-${booking.id}`}>
+                    <Card 
+                      key={booking.id} 
+                      className={`overflow-hidden ${booking.status === 'cancellation_requested' ? 'border-orange-200 bg-orange-50/30' : 'border-amber-200 bg-amber-50/30'}`}
+                      data-testid={`request-card-${booking.id}`}
+                    >
                       <div className="grid md:grid-cols-4 gap-6 p-6">
                         {/* Property Info */}
                         <div className="md:col-span-2 space-y-3">
@@ -421,8 +498,11 @@ export default function Bookings() {
                                 <span>{property?.location || 'Unknown location'}</span>
                               </div>
                             </div>
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                              Pending Approval
+                            <Badge className={booking.status === 'cancellation_requested' 
+                              ? 'bg-orange-100 text-orange-700 border-orange-200' 
+                              : 'bg-amber-100 text-amber-700 border-amber-200'
+                            }>
+                              {booking.status === 'cancellation_requested' ? 'Cancel Requested' : 'Pending Approval'}
                             </Badge>
                           </div>
 
@@ -486,25 +566,51 @@ export default function Bookings() {
 
                         {/* Actions */}
                         <div className="space-y-3 flex flex-col justify-center">
-                          <Button 
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                            onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'confirmed' })}
-                            disabled={updateStatusMutation.isPending}
-                            data-testid={`button-approve-${booking.id}`}
-                          >
-                            <Check className="mr-2 h-4 w-4" />
-                            Approve Booking
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                            onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
-                            disabled={updateStatusMutation.isPending}
-                            data-testid={`button-decline-${booking.id}`}
-                          >
-                            <X className="mr-2 h-4 w-4" />
-                            Decline
-                          </Button>
+                          {booking.status === 'pending' ? (
+                            <>
+                              <Button 
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'confirmed' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-approve-${booking.id}`}
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Approve Booking
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-decline-${booking.id}`}
+                              >
+                                <X className="mr-2 h-4 w-4" />
+                                Decline
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button 
+                                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-approve-cancel-${booking.id}`}
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Approve Cancellation
+                              </Button>
+                              <Button 
+                                variant="outline"
+                                className="w-full border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'confirmed' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-deny-cancel-${booking.id}`}
+                              >
+                                <X className="mr-2 h-4 w-4" />
+                                Deny Cancellation
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </Card>

@@ -93,6 +93,7 @@ export interface IStorage {
   createPropertyAvailability(availability: InsertPropertyAvailability): Promise<PropertyAvailability>;
   updatePropertyAvailability(id: number, availability: Partial<InsertPropertyAvailability>): Promise<PropertyAvailability | undefined>;
   deletePropertyAvailability(id: number): Promise<void>;
+  deletePropertyAvailabilityByDates(propertyId: number, startDate: Date, endDate: Date): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -367,6 +368,16 @@ export class DatabaseStorage implements IStorage {
 
   async deletePropertyAvailability(id: number): Promise<void> {
     await db.delete(propertyAvailability).where(eq(propertyAvailability.id, id));
+  }
+
+  async deletePropertyAvailabilityByDates(propertyId: number, startDate: Date, endDate: Date): Promise<void> {
+    await db.delete(propertyAvailability).where(
+      and(
+        eq(propertyAvailability.propertyId, propertyId),
+        eq(propertyAvailability.startDate, startDate),
+        eq(propertyAvailability.endDate, endDate)
+      )
+    );
   }
 }
 

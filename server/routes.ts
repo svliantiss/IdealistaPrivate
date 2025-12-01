@@ -256,9 +256,39 @@ export async function registerRoutes(
         });
       }
       
+      // If booking is being cancelled and was confirmed/paid, free up the dates
+      if (status === "cancelled" && (existingBooking.status === "confirmed" || existingBooking.status === "paid")) {
+        await storage.deletePropertyAvailabilityByDates(
+          booking.propertyId,
+          booking.checkIn,
+          booking.checkOut
+        );
+      }
+      
       res.json(booking);
     } catch (error) {
       console.error("Error updating booking status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Request cancellation for cross-agency bookings
+  app.patch("/api/bookings/:id/request-cancellation", async (req, res) => {
+    try {
+      const existingBooking = await storage.getBooking(parseInt(req.params.id));
+      if (!existingBooking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Set status to "cancellation_requested"
+      const booking = await storage.updateBookingStatus(parseInt(req.params.id), "cancellation_requested");
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      console.error("Error requesting cancellation:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

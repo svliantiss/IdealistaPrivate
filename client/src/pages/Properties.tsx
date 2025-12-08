@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, MoreHorizontal, Eye, Building, Calendar } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
+import { AddPropertyDialog } from "@/components/AddPropertyDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,9 +67,11 @@ export default function Properties() {
             <h1 className="text-3xl font-serif font-bold text-primary">My Rentals</h1>
             <p className="text-muted-foreground mt-1">Manage your listings and availability.</p>
           </div>
-          <Button className="bg-secondary hover:bg-secondary/90 text-white" data-testid="button-add-property">
-            <Plus className="mr-2 h-4 w-4" /> Add Property
-          </Button>
+          <AddPropertyDialog defaultType="rental">
+            <Button className="bg-secondary hover:bg-secondary/90 text-white" data-testid="button-add-property">
+              <Plus className="mr-2 h-4 w-4" /> Add Property
+            </Button>
+          </AddPropertyDialog>
         </div>
 
         <div className="space-y-4">

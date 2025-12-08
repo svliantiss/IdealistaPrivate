@@ -1,6 +1,5 @@
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -9,10 +8,10 @@ import {
   Building, 
   CreditCard, 
   Clock,
-  Plus,
   Home
 } from "lucide-react";
 import { Link } from "wouter";
+import { AddPropertyDialog } from "@/components/AddPropertyDialog";
 
 const CURRENT_AGENT_ID = 1;
 
@@ -69,12 +68,7 @@ export default function Dashboard() {
             <h1 className="text-3xl font-serif font-bold text-primary">Dashboard</h1>
             <p className="text-muted-foreground mt-1">Welcome back, Ryan. Here's what's happening today.</p>
           </div>
-          <Link href="/properties">
-            <Button className="bg-sidebar text-white hover:bg-sidebar/90 shadow-md gap-2" data-testid="button-add-property">
-              <Plus className="h-4 w-4" />
-              Add New Property
-            </Button>
-          </Link>
+          <AddPropertyDialog defaultType="choose" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

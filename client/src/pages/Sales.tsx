@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Euro, Bed, Bath, Maximize2, Image as ImageIcon, Plus, Search } from "lucide-react";
-import { Link } from "wouter";
 import { useState } from "react";
+import { Link } from "wouter";
+import { AddPropertyDialog } from "@/components/AddPropertyDialog";
 
 const CURRENT_AGENT_ID = 1;
 
@@ -36,12 +37,12 @@ export default function Sales() {
             <h1 className="text-3xl font-serif font-bold text-primary">My Properties for Sale</h1>
             <p className="text-muted-foreground mt-1">Manage your active sales listings</p>
           </div>
-          <Link href="/sales/add">
+          <AddPropertyDialog defaultType="sale">
             <Button className="bg-secondary hover:bg-secondary/90 gap-2" data-testid="button-add-sales-property">
               <Plus className="h-4 w-4" />
               List Property for Sale
             </Button>
-          </Link>
+          </AddPropertyDialog>
         </div>
 
         {/* Filters */}

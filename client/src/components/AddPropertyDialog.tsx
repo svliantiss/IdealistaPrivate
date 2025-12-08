@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -255,6 +256,9 @@ export function AddPropertyDialog({
             {step === "rental" && "Add Rental Property"}
             {step === "sale" && "Add Property for Sale"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Add a new property listing to your portfolio
+          </DialogDescription>
         </DialogHeader>
 
         {step === "choose" && (

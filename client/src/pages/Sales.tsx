@@ -1,32 +1,21 @@
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Euro, Bed, Bath, Maximize2, Image as ImageIcon, Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { MapPin, Bed, Bath, Maximize2, Image as ImageIcon, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { AddPropertyDialog } from "@/components/AddPropertyDialog";
 
 const CURRENT_AGENT_ID = 1;
 
 export default function Sales() {
-  const [searchLocation, setSearchLocation] = useState("");
-  const [maxPriceFilter, setMaxPriceFilter] = useState("");
-
   const { data: properties = [], isLoading } = useQuery<any[]>({
     queryKey: [`/api/agents/${CURRENT_AGENT_ID}/sales-properties`],
   });
 
   // Filter to only show active sales properties (not sold)
   const activeProperties = properties.filter((p: any) => p.status === 'active');
-
-  const filteredProperties = activeProperties.filter(p => {
-    const matchesLocation = !searchLocation || p.location.toLowerCase().includes(searchLocation.toLowerCase());
-    const matchesPrice = !maxPriceFilter || parseFloat(p.price) <= parseFloat(maxPriceFilter);
-    return matchesLocation && matchesPrice;
-  });
 
   return (
     <Layout>
@@ -35,7 +24,7 @@ export default function Sales() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-serif font-bold text-primary">My Properties for Sale</h1>
-            <p className="text-muted-foreground mt-1">Manage your active sales listings</p>
+            <p className="text-muted-foreground mt-1">Manage your active sales listings ({activeProperties.length} properties)</p>
           </div>
           <AddPropertyDialog defaultType="sale">
             <Button className="bg-secondary hover:bg-secondary/90 gap-2" data-testid="button-add-sales-property">
@@ -45,48 +34,16 @@ export default function Sales() {
           </AddPropertyDialog>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Search Properties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search by location..."
-                  value={searchLocation}
-                  onChange={(e) => setSearchLocation(e.target.value)}
-                  data-testid="input-search-location"
-                />
-              </div>
-              <div className="flex-1">
-                <Input
-                  placeholder="Max price..."
-                  type="number"
-                  value={maxPriceFilter}
-                  onChange={(e) => setMaxPriceFilter(e.target.value)}
-                  data-testid="input-max-price"
-                />
-              </div>
-              <Button variant="outline" className="gap-2">
-                <Search className="h-4 w-4" />
-                Filter
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Properties Grid */}
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading properties...</div>
-        ) : filteredProperties.length === 0 ? (
+        ) : activeProperties.length === 0 ? (
           <Card className="text-center py-12">
-            <p className="text-muted-foreground">No properties found matching your criteria</p>
+            <p className="text-muted-foreground">You haven't listed any properties for sale yet</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProperties.map((property) => (
+            {activeProperties.map((property) => (
               <Card key={property.id} className="hover:shadow-lg transition-shadow overflow-hidden cursor-pointer" data-testid={`card-property-${property.id}`}>
                 {/* Property Image */}
                 <div className="relative bg-gradient-to-br from-blue-100 to-emerald-100 h-48 flex items-center justify-center overflow-hidden">

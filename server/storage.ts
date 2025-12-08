@@ -15,6 +15,8 @@ import {
   type InsertSalesCommission,
   type PropertyAvailability,
   type InsertPropertyAvailability,
+  type AgentAmenity,
+  type InsertAgentAmenity,
   agents,
   properties,
   bookings,
@@ -22,7 +24,8 @@ import {
   salesProperties,
   salesTransactions,
   salesCommissions,
-  propertyAvailability
+  propertyAvailability,
+  agentAmenities
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or } from "drizzle-orm";
@@ -95,6 +98,11 @@ export interface IStorage {
   updatePropertyAvailability(id: number, availability: Partial<InsertPropertyAvailability>): Promise<PropertyAvailability | undefined>;
   deletePropertyAvailability(id: number): Promise<void>;
   deletePropertyAvailabilityByDates(propertyId: number, startDate: Date, endDate: Date): Promise<void>;
+
+  // Agent Amenities methods
+  getAgentAmenities(agentId: number): Promise<AgentAmenity[]>;
+  createAgentAmenity(amenity: InsertAgentAmenity): Promise<AgentAmenity>;
+  deleteAgentAmenity(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -412,6 +420,20 @@ export class DatabaseStorage implements IStorage {
         break; // Found and deleted the specific record, no need to continue
       }
     }
+  }
+
+  // Agent Amenities methods
+  async getAgentAmenities(agentId: number): Promise<AgentAmenity[]> {
+    return await db.select().from(agentAmenities).where(eq(agentAmenities.agentId, agentId));
+  }
+
+  async createAgentAmenity(amenity: InsertAgentAmenity): Promise<AgentAmenity> {
+    const [result] = await db.insert(agentAmenities).values(amenity).returning();
+    return result;
+  }
+
+  async deleteAgentAmenity(id: number): Promise<void> {
+    await db.delete(agentAmenities).where(eq(agentAmenities.id, id));
   }
 }
 

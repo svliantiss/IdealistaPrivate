@@ -186,3 +186,18 @@ export const insertPropertyAvailabilitySchema = createInsertSchema(propertyAvail
 });
 export type InsertPropertyAvailability = z.infer<typeof insertPropertyAvailabilitySchema>;
 export type PropertyAvailability = typeof propertyAvailability.$inferSelect;
+
+// Agent Custom Amenities Table
+export const agentAmenities = pgTable("agent_amenities", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => agents.id),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAgentAmenitySchema = createInsertSchema(agentAmenities).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertAgentAmenity = z.infer<typeof insertAgentAmenitySchema>;
+export type AgentAmenity = typeof agentAmenities.$inferSelect;

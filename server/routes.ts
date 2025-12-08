@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema, insertPropertyAvailabilitySchema } from "@shared/schema";
+import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema, insertPropertyAvailabilitySchema, insertAgentAmenitySchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
 // Extend session type for admin authentication
@@ -639,6 +639,44 @@ export async function registerRoutes(
       res.json(employeeStats);
     } catch (error) {
       console.error("Error fetching employee stats:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== AGENT AMENITIES ROUTES =====
+  app.get("/api/agents/:agentId/amenities", async (req, res) => {
+    try {
+      const amenities = await storage.getAgentAmenities(parseInt(req.params.agentId));
+      res.json(amenities);
+    } catch (error) {
+      console.error("Error fetching agent amenities:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/agents/:agentId/amenities", async (req, res) => {
+    try {
+      const result = insertAgentAmenitySchema.safeParse({
+        ...req.body,
+        agentId: parseInt(req.params.agentId),
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).message });
+      }
+      const amenity = await storage.createAgentAmenity(result.data);
+      res.status(201).json(amenity);
+    } catch (error) {
+      console.error("Error creating agent amenity:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/agents/:agentId/amenities/:id", async (req, res) => {
+    try {
+      await storage.deleteAgentAmenity(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting agent amenity:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

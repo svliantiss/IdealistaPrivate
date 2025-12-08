@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,9 +20,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Building2, Home, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Building2, Home, ArrowLeft, X } from "lucide-react";
 
 const CURRENT_AGENT_ID = 1;
+
+const RENTAL_SUGGESTED_AMENITIES = [
+  "Pool", "WiFi", "Air Conditioning", "Parking", "Sea View", "Garden", 
+  "BBQ", "Terrace", "Gym", "Pet Friendly", "Security", "Elevator",
+  "Beachfront", "Heated Pool", "Private Parking"
+];
+
+const SALES_SUGGESTED_AMENITIES = [
+  "Pool", "Garden", "Terrace", "Parking", "Sea View", "Security",
+  "Gym", "Wine Cellar", "Home Office", "Guest House", "Golf View",
+  "Beach Access", "Garage", "Infinity Pool", "Concierge"
+];
 
 interface AddPropertyDialogProps {
   children?: React.ReactNode;
@@ -49,10 +62,36 @@ export function AddPropertyDialog({
     beds: "",
     baths: "",
     sqm: "",
-    amenities: "",
     imageUrl: "",
     licenseNumber: "",
     status: "active",
+  });
+
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [customAmenityInput, setCustomAmenityInput] = useState("");
+
+  const { data: customAmenities = [] } = useQuery({
+    queryKey: [`/api/agents/${CURRENT_AGENT_ID}/amenities`],
+    queryFn: async () => {
+      const res = await fetch(`/api/agents/${CURRENT_AGENT_ID}/amenities`);
+      if (!res.ok) throw new Error("Failed to fetch custom amenities");
+      return res.json();
+    },
+  });
+
+  const addCustomAmenityMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch(`/api/agents/${CURRENT_AGENT_ID}/amenities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error("Failed to add custom amenity");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/agents/${CURRENT_AGENT_ID}/amenities`] });
+    },
   });
 
   const resetForm = () => {
@@ -66,11 +105,42 @@ export function AddPropertyDialog({
       beds: "",
       baths: "",
       sqm: "",
-      amenities: "",
       imageUrl: "",
       licenseNumber: "",
       status: "active",
     });
+    setSelectedAmenities([]);
+    setCustomAmenityInput("");
+  };
+
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities((prev) =>
+      prev.includes(amenity)
+        ? prev.filter((a) => a !== amenity)
+        : [...prev, amenity]
+    );
+  };
+
+  const addCustomAmenity = () => {
+    const trimmed = customAmenityInput.trim();
+    if (!trimmed) return;
+    
+    if (!selectedAmenities.includes(trimmed)) {
+      setSelectedAmenities((prev) => [...prev, trimmed]);
+    }
+    
+    const existsInCustom = customAmenities.some(
+      (a: any) => a.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    const existsInSuggested = 
+      RENTAL_SUGGESTED_AMENITIES.some((a) => a.toLowerCase() === trimmed.toLowerCase()) ||
+      SALES_SUGGESTED_AMENITIES.some((a) => a.toLowerCase() === trimmed.toLowerCase());
+    
+    if (!existsInCustom && !existsInSuggested) {
+      addCustomAmenityMutation.mutate(trimmed);
+    }
+    
+    setCustomAmenityInput("");
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -137,11 +207,6 @@ export function AddPropertyDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const amenitiesArray = formData.amenities
-      .split(",")
-      .map((a) => a.trim())
-      .filter((a) => a.length > 0);
-
     const imagesArray = formData.imageUrl ? [formData.imageUrl] : [];
 
     const propertyData: any = {
@@ -154,7 +219,7 @@ export function AddPropertyDialog({
       beds: parseInt(formData.beds) || 0,
       baths: parseInt(formData.baths) || 0,
       sqm: parseInt(formData.sqm) || 0,
-      amenities: amenitiesArray,
+      amenities: selectedAmenities,
       images: imagesArray,
       licenseNumber: formData.licenseNumber,
       status: formData.status,
@@ -404,15 +469,96 @@ export function AddPropertyDialog({
                 </Select>
               </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="amenities">Amenities (comma-separated)</Label>
-                <Input
-                  id="amenities"
-                  value={formData.amenities}
-                  onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
-                  placeholder="e.g., Pool, WiFi, Parking, Sea View, AC"
-                  data-testid="input-amenities"
-                />
+              <div className="md:col-span-2 space-y-3">
+                <Label>Amenities</Label>
+                
+                {selectedAmenities.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <span className="text-xs text-emerald-700 w-full mb-1">Selected:</span>
+                    {selectedAmenities.map((amenity) => (
+                      <Badge
+                        key={amenity}
+                        variant="default"
+                        className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer gap-1"
+                        onClick={() => toggleAmenity(amenity)}
+                        data-testid={`badge-selected-${amenity.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {amenity}
+                        <X className="h-3 w-3" />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground">Click to add:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(step === "rental" ? RENTAL_SUGGESTED_AMENITIES : SALES_SUGGESTED_AMENITIES).map((amenity) => (
+                      <Badge
+                        key={amenity}
+                        variant={selectedAmenities.includes(amenity) ? "default" : "outline"}
+                        className={`cursor-pointer transition-all ${
+                          selectedAmenities.includes(amenity) 
+                            ? "bg-primary" 
+                            : "hover:bg-primary/10"
+                        }`}
+                        onClick={() => toggleAmenity(amenity)}
+                        data-testid={`badge-amenity-${amenity.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {amenity}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                
+                {customAmenities.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs text-muted-foreground">Your custom amenities:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {customAmenities.map((amenity: any) => (
+                        <Badge
+                          key={amenity.id}
+                          variant={selectedAmenities.includes(amenity.name) ? "default" : "secondary"}
+                          className={`cursor-pointer transition-all ${
+                            selectedAmenities.includes(amenity.name) 
+                              ? "bg-primary" 
+                              : "hover:bg-secondary/80"
+                          }`}
+                          onClick={() => toggleAmenity(amenity.name)}
+                          data-testid={`badge-custom-${amenity.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          {amenity.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add custom amenity..."
+                    value={customAmenityInput}
+                    onChange={(e) => setCustomAmenityInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addCustomAmenity();
+                      }
+                    }}
+                    data-testid="input-custom-amenity"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addCustomAmenity}
+                    disabled={!customAmenityInput.trim()}
+                    data-testid="button-add-custom-amenity"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="md:col-span-2">

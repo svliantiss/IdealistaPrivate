@@ -28,6 +28,7 @@ export const properties = pgTable("properties", {
   location: text("location").notNull(),
   propertyType: text("property_type").notNull(), // villa, apartment, studio
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  priceType: text("price_type").notNull().default("night"), // night, week, month
   beds: integer("beds").notNull(),
   baths: integer("baths").notNull(),
   sqm: integer("sqm").notNull(),

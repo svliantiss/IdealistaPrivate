@@ -45,6 +45,7 @@ export function AddPropertyDialog({
     location: "",
     propertyType: "apartment",
     price: "",
+    priceType: "night",
     beds: "",
     baths: "",
     sqm: "",
@@ -61,6 +62,7 @@ export function AddPropertyDialog({
       location: "",
       propertyType: "apartment",
       price: "",
+      priceType: "night",
       beds: "",
       baths: "",
       sqm: "",
@@ -142,7 +144,7 @@ export function AddPropertyDialog({
 
     const imagesArray = formData.imageUrl ? [formData.imageUrl] : [];
 
-    const propertyData = {
+    const propertyData: any = {
       agentId: CURRENT_AGENT_ID,
       title: formData.title,
       description: formData.description,
@@ -157,6 +159,10 @@ export function AddPropertyDialog({
       licenseNumber: formData.licenseNumber,
       status: formData.status,
     };
+
+    if (step === "rental") {
+      propertyData.priceType = formData.priceType;
+    }
 
     if (step === "rental") {
       createRentalMutation.mutate(propertyData);
@@ -295,7 +301,7 @@ export function AddPropertyDialog({
 
               <div>
                 <Label htmlFor="price">
-                  {step === "rental" ? "Price per Night (€) *" : "Sale Price (€) *"}
+                  {step === "rental" ? "Price (€) *" : "Sale Price (€) *"}
                 </Label>
                 <Input
                   id="price"
@@ -307,6 +313,25 @@ export function AddPropertyDialog({
                   data-testid="input-price"
                 />
               </div>
+
+              {step === "rental" && (
+                <div>
+                  <Label htmlFor="priceType">Price Period *</Label>
+                  <Select
+                    value={formData.priceType}
+                    onValueChange={(value) => setFormData({ ...formData, priceType: value })}
+                  >
+                    <SelectTrigger data-testid="select-price-type">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="night">Per Night</SelectItem>
+                      <SelectItem value="week">Per Week</SelectItem>
+                      <SelectItem value="month">Per Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="licenseNumber">License Number *</Label>

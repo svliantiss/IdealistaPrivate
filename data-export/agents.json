@@ -1,0 +1,102 @@
+[
+  {
+    "id": 2,
+    "name": "Sarah Miller",
+    "email": "sarah@coastalhomes.com",
+    "agency": "Coastal Homes",
+    "phone": "+34 951 234 567",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-29T18:33:09.337Z"
+  },
+  {
+    "id": 3,
+    "name": "David Chen",
+    "email": "david@urbanstays.com",
+    "agency": "Urban Stays",
+    "phone": "+34 952 345 678",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-29T18:33:09.337Z"
+  },
+  {
+    "id": 4,
+    "name": "Maria Garcia",
+    "email": "maria@golfproperties.com",
+    "agency": "Golf Properties",
+    "phone": "+34 951 456 789",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-29T18:33:09.337Z"
+  },
+  {
+    "id": 5,
+    "name": "Emma Wilson",
+    "email": "emma@velmont.com",
+    "agency": "Velmont Properties",
+    "phone": "+34 950 200 200",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-30T20:20:17.985Z"
+  },
+  {
+    "id": 6,
+    "name": "Michael Torres",
+    "email": "michael@velmont.com",
+    "agency": "Velmont Properties",
+    "phone": "+34 950 300 300",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-30T20:20:17.985Z"
+  },
+  {
+    "id": 7,
+    "name": "Sofia Rodriguez",
+    "email": "sofia@velmont.com",
+    "agency": "Velmont Properties",
+    "phone": "+34 950 400 400",
+    "agencyPhone": null,
+    "agencyEmail": null,
+    "createdAt": "2025-11-30T20:20:17.985Z"
+  },
+  {
+    "id": 1,
+    "name": "Ryan",
+    "email": "ryan@velmont.com",
+    "agency": "Velmont Properties",
+    "phone": "+34 950 100 100",
+    "agencyPhone": "+34 912 345 678",
+    "agencyEmail": "info@velmontproperties.com",
+    "createdAt": "2025-11-29T18:33:09.337Z"
+  },
+  {
+    "id": 8,
+    "name": "James Brown",
+    "email": "james@sunnyhomes.es",
+    "agency": "Sunny Homes Spain",
+    "phone": "+34 955 111 222",
+    "agencyPhone": "+34 955 000 000",
+    "agencyEmail": "info@sunnyhomes.es",
+    "createdAt": "2025-12-01T12:33:44.373Z"
+  },
+  {
+    "id": 9,
+    "name": "Laura Martinez",
+    "email": "laura@mediterraneanvillas.com",
+    "agency": "Mediterranean Villas",
+    "phone": "+34 956 333 444",
+    "agencyPhone": "+34 956 300 000",
+    "agencyEmail": "contact@mediterraneanvillas.com",
+    "createdAt": "2025-12-01T12:33:44.373Z"
+  },
+  {
+    "id": 10,
+    "name": "Carlos Fernandez",
+    "email": "carlos@costadelsol.com",
+    "agency": "Costa del Sol Realty",
+    "phone": "+34 957 555 666",
+    "agencyPhone": "+34 957 500 000",
+    "agencyEmail": "sales@costadelsol.com",
+    "createdAt": "2025-12-01T12:33:44.373Z"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "id": 2,
+    "agentId": 1,
+    "name": "Ice tub",
+    "createdAt": "2025-12-09T11:53:28.704Z"
+  },
+  {
+    "id": 3,
+    "agentId": 1,
+    "name": "Disabled access",
+    "createdAt": "2025-12-10T13:45:11.980Z"
+  }
+]

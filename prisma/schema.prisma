@@ -1,0 +1,214 @@
+// Prisma schema for Idealista Private platform
+// Migrated from Drizzle ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Agents Table
+model Agent {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  agency       String?
+  phone        String?
+  agencyPhone  String?  @map("agency_phone")
+  agencyEmail  String?  @map("agency_email")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  properties              Property[]
+  ownedBookings          Booking[]            @relation("OwnerAgent")
+  madeBookings           Booking[]            @relation("BookingAgent")
+  ownerCommissions       Commission[]         @relation("OwnerCommissions")
+  bookingCommissions     Commission[]         @relation("BookingCommissions")
+  salesProperties        SalesProperty[]
+  soldProperties         SalesTransaction[]   @relation("SellerAgent")
+  boughtProperties       SalesTransaction[]   @relation("BuyerAgent")
+  sellerCommissions      SalesCommission[]    @relation("SellerCommissions")
+  buyerCommissions       SalesCommission[]    @relation("BuyerCommissions")
+  amenities              AgentAmenity[]
+
+  @@map("agents")
+}
+
+// Properties Table (Rental Properties)
+model Property {
+  id            Int      @id @default(autoincrement())
+  agentId       Int      @map("agent_id")
+  title         String
+  description   String?
+  location      String
+  propertyType  String   @map("property_type")
+  price         Decimal  @db.Decimal(10, 2)
+  priceType     String   @default("night") @map("price_type")
+  beds          Int
+  baths         Int
+  sqm           Int
+  amenities     String[]
+  images        String[]
+  status        String   @default("draft")
+  licenseNumber String?  @map("license_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  agent                  Agent                   @relation(fields: [agentId], references: [id])
+  bookings               Booking[]
+  availability           PropertyAvailability[]
+
+  @@map("properties")
+}
+
+// Bookings Table
+model Booking {
+  id              Int      @id @default(autoincrement())
+  propertyId      Int      @map("property_id")
+  ownerAgentId    Int      @map("owner_agent_id")
+  bookingAgentId  Int      @map("booking_agent_id")
+  clientName      String   @map("client_name")
+  clientEmail     String   @map("client_email")
+  clientPhone     String?  @map("client_phone")
+  checkIn         DateTime @map("check_in")
+  checkOut        DateTime @map("check_out")
+  totalAmount     Decimal  @db.Decimal(10, 2) @map("total_amount")
+  status          String   @default("pending")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  property        Property               @relation(fields: [propertyId], references: [id])
+  ownerAgent      Agent                  @relation("OwnerAgent", fields: [ownerAgentId], references: [id])
+  bookingAgent    Agent                  @relation("BookingAgent", fields: [bookingAgentId], references: [id])
+  commission      Commission?
+  availability    PropertyAvailability[]
+
+  @@map("bookings")
+}
+
+// Commission Tracking Table
+model Commission {
+  id                Int      @id @default(autoincrement())
+  bookingId         Int      @unique @map("booking_id")
+  ownerAgentId      Int      @map("owner_agent_id")
+  bookingAgentId    Int      @map("booking_agent_id")
+  totalAmount       Decimal  @db.Decimal(10, 2) @map("total_amount")
+  ownerCommission   Decimal  @db.Decimal(10, 2) @map("owner_commission")
+  bookingCommission Decimal  @db.Decimal(10, 2) @map("booking_commission")
+  platformFee       Decimal  @db.Decimal(10, 2) @map("platform_fee")
+  commissionRate    Decimal  @default(10.00) @db.Decimal(5, 2) @map("commission_rate")
+  status            String   @default("pending")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  booking         Booking @relation(fields: [bookingId], references: [id])
+  ownerAgent      Agent   @relation("OwnerCommissions", fields: [ownerAgentId], references: [id])
+  bookingAgent    Agent   @relation("BookingCommissions", fields: [bookingAgentId], references: [id])
+
+  @@map("commissions")
+}
+
+// Sales Properties Table (For Sale listings)
+model SalesProperty {
+  id            Int      @id @default(autoincrement())
+  agentId       Int      @map("agent_id")
+  title         String
+  description   String?
+  location      String
+  propertyType  String   @map("property_type")
+  price         Decimal  @db.Decimal(12, 2)
+  beds          Int
+  baths         Int
+  sqm           Int
+  amenities     String[]
+  images        String[]
+  status        String   @default("draft")
+  licenseNumber String?  @map("license_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  agent         Agent              @relation(fields: [agentId], references: [id])
+  transactions  SalesTransaction[]
+
+  @@map("sales_properties")
+}
+
+// Sales Transactions Table
+model SalesTransaction {
+  id            Int      @id @default(autoincrement())
+  propertyId    Int      @map("property_id")
+  sellerAgentId Int      @map("seller_agent_id")
+  buyerAgentId  Int      @map("buyer_agent_id")
+  buyerName     String   @map("buyer_name")
+  buyerEmail    String   @map("buyer_email")
+  buyerPhone    String?  @map("buyer_phone")
+  salePrice     Decimal  @db.Decimal(12, 2) @map("sale_price")
+  saleDate      DateTime @map("sale_date")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  property      SalesProperty    @relation(fields: [propertyId], references: [id])
+  sellerAgent   Agent            @relation("SellerAgent", fields: [sellerAgentId], references: [id])
+  buyerAgent    Agent            @relation("BuyerAgent", fields: [buyerAgentId], references: [id])
+  commission    SalesCommission?
+
+  @@map("sales_transactions")
+}
+
+// Sales Commissions Table
+model SalesCommission {
+  id               Int      @id @default(autoincrement())
+  transactionId    Int      @unique @map("transaction_id")
+  sellerAgentId    Int      @map("seller_agent_id")
+  buyerAgentId     Int      @map("buyer_agent_id")
+  totalAmount      Decimal  @db.Decimal(12, 2) @map("total_amount")
+  sellerCommission Decimal  @db.Decimal(12, 2) @map("seller_commission")
+  buyerCommission  Decimal  @db.Decimal(12, 2) @map("buyer_commission")
+  platformFee      Decimal  @db.Decimal(12, 2) @map("platform_fee")
+  commissionRate   Decimal  @default(4.00) @db.Decimal(5, 2) @map("commission_rate")
+  status           String   @default("pending")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relations
+  transaction   SalesTransaction @relation(fields: [transactionId], references: [id])
+  sellerAgent   Agent            @relation("SellerCommissions", fields: [sellerAgentId], references: [id])
+  buyerAgent    Agent            @relation("BuyerCommissions", fields: [buyerAgentId], references: [id])
+
+  @@map("sales_commissions")
+}
+
+// Property Availability Table (for rental calendar)
+model PropertyAvailability {
+  id          Int       @id @default(autoincrement())
+  propertyId  Int       @map("property_id")
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime  @map("end_date")
+  isAvailable Int       @default(1) @map("is_available")
+  bookingId   Int?      @map("booking_id")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  property    Property  @relation(fields: [propertyId], references: [id])
+  booking     Booking?  @relation(fields: [bookingId], references: [id])
+
+  @@map("property_availability")
+}
+
+// Agent Custom Amenities Table
+model AgentAmenity {
+  id        Int      @id @default(autoincrement())
+  agentId   Int      @map("agent_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  agent     Agent    @relation(fields: [agentId], references: [id])
+
+  @@map("agent_amenities")
+}

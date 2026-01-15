@@ -1,0 +1,9 @@
+import { defineConfig } from '@prisma/client';
+
+export default defineConfig({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19YN3hRLWg3NGRjOHFFUkhkQUhCTWEiLCJhcGlfa2V5IjoiMDFLRjBYUTdCMDJFOUdUNzhZTkM0QllSR1oiLCJ0ZW5hbnRfaWQiOiJhY2M4OTEwMTcxNzhiNDNmNjc3NTkyZjdhNWNjYTYyODFhOTI3NzZlMDdhN2M3ZGU3OWFlNWNkNmFiZWJhYzY2IiwiaW50ZXJuYWxfc2VjcmV0IjoiZTI2Mzk3MTItNmMwZS00ZjY5LWFhYmUtYmY3MGRhZjU1OTM1In0.rIrwB10hfO-Mt5PTMScZnsGNdwRF4rThlr6RK9xEZ9E",
+    },
+  },
+});

@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "propertyId": 1,
+    "startDate": "2025-06-12T00:00:00.000Z",
+    "endDate": "2025-06-19T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 1,
+    "notes": "Booked by Thomas Weber",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 2,
+    "propertyId": 1,
+    "startDate": "2025-08-10T00:00:00.000Z",
+    "endDate": "2025-08-24T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 3,
+    "notes": "Booked by James Smith",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 3,
+    "propertyId": 1,
+    "startDate": "2025-09-10T00:00:00.000Z",
+    "endDate": "2025-09-15T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 10,
+    "notes": "Booked by Catherine Dupont",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 4,
+    "propertyId": 2,
+    "startDate": "2025-07-01T00:00:00.000Z",
+    "endDate": "2025-07-05T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 2,
+    "notes": "Booked by Elena Rossi",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 5,
+    "propertyId": 4,
+    "startDate": "2025-08-05T00:00:00.000Z",
+    "endDate": "2025-08-07T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 7,
+    "notes": "Booked by Hans Mueller",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 6,
+    "propertyId": 1,
+    "startDate": "2025-12-20T00:00:00.000Z",
+    "endDate": "2025-12-30T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": null,
+    "notes": "Owner blocked - holiday",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 7,
+    "propertyId": 6,
+    "startDate": "2025-08-15T00:00:00.000Z",
+    "endDate": "2025-08-22T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 8,
+    "notes": "Booked by Francesca Romano",
+    "createdAt": "2025-12-01T10:56:58.183Z"
+  },
+  {
+    "id": 9,
+    "propertyId": 8,
+    "startDate": "2025-12-15T00:00:00.000Z",
+    "endDate": "2025-12-22T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 16,
+    "notes": null,
+    "createdAt": "2025-12-01T12:35:07.047Z"
+  },
+  {
+    "id": 10,
+    "propertyId": 10,
+    "startDate": "2025-12-20T00:00:00.000Z",
+    "endDate": "2025-12-27T00:00:00.000Z",
+    "isAvailable": 0,
+    "bookingId": 17,
+    "notes": null,
+    "createdAt": "2025-12-01T12:35:07.047Z"
+  }
+]

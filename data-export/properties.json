@@ -1,0 +1,377 @@
+[
+  {
+    "id": 2,
+    "agentId": 2,
+    "title": "Modern Sea View Penthouse",
+    "description": "Exclusive penthouse in Puerto Banus with spectacular terrace and sea views. Walk to beach and marina.",
+    "location": "Puerto Banus, Malaga",
+    "propertyType": "apartment",
+    "price": "280.00",
+    "priceType": "night",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 140,
+    "amenities": [
+      "Terrace",
+      "Wifi",
+      "AC",
+      "Sea View",
+      "Parking"
+    ],
+    "images": [
+      "/assets/generated_images/modern_apartment_interior_living_room.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MA-23456",
+    "createdAt": "2025-11-29T18:33:09.359Z",
+    "updatedAt": "2025-11-29T18:33:09.359Z"
+  },
+  {
+    "id": 3,
+    "agentId": 3,
+    "title": "Historic Center Chic Studio",
+    "description": "Beautifully renovated studio in the heart of Malaga. Perfect for couples or solo travelers.",
+    "location": "Malaga Centro",
+    "propertyType": "studio",
+    "price": "120.00",
+    "priceType": "night",
+    "beds": 1,
+    "baths": 1,
+    "sqm": 45,
+    "amenities": [
+      "Historic",
+      "Central",
+      "Design",
+      "Wifi",
+      "AC"
+    ],
+    "images": [
+      "/assets/generated_images/cozy_studio_apartment_interior.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MA-34567",
+    "createdAt": "2025-11-29T18:33:09.359Z",
+    "updatedAt": "2025-11-29T18:33:09.359Z"
+  },
+  {
+    "id": 4,
+    "agentId": 4,
+    "title": "Golf Front Family Villa",
+    "description": "Spacious family villa with golf course views. Large garden and BBQ area perfect for entertaining.",
+    "location": "Nueva Andalucia",
+    "propertyType": "villa",
+    "price": "380.00",
+    "priceType": "night",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 320,
+    "amenities": [
+      "Golf View",
+      "Garden",
+      "BBQ",
+      "Pool",
+      "Wifi",
+      "Parking"
+    ],
+    "images": [
+      "/assets/generated_images/modern_luxury_villa_exterior_with_pool.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MA-45678",
+    "createdAt": "2025-11-29T18:33:09.359Z",
+    "updatedAt": "2025-11-29T18:33:09.359Z"
+  },
+  {
+    "id": 1,
+    "agentId": 1,
+    "title": "Villa Paraiso with Infinity Pool",
+    "description": "Stunning luxury villa with panoramic sea views and infinity pool. Modern design with high-end finishes throughout.",
+    "location": "Marbella, Golden Mile",
+    "propertyType": "villa",
+    "price": "450.00",
+    "priceType": "night",
+    "beds": 5,
+    "baths": 6,
+    "sqm": 450,
+    "amenities": [
+      "Sea View",
+      "Pool",
+      "Private Parking",
+      "AC",
+      "Wifi",
+      "BBQ"
+    ],
+    "images": [
+      "/assets/generated_images/modern_luxury_villa_with_pool.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MA-12345",
+    "createdAt": "2025-11-29T18:33:09.359Z",
+    "updatedAt": "2025-11-29T18:33:09.359Z"
+  },
+  {
+    "id": 6,
+    "agentId": 1,
+    "title": "Beachfront Apartment - Marbella",
+    "description": "Modern beachfront apartment with private access to beach and sea view",
+    "location": "Marbella, Playa",
+    "propertyType": "apartment",
+    "price": "320.00",
+    "priceType": "night",
+    "beds": 2,
+    "baths": 2,
+    "sqm": 120,
+    "amenities": [
+      "Beachfront",
+      "Pool",
+      "Parking",
+      "AC",
+      "WiFi"
+    ],
+    "images": [
+      "/assets/generated_images/beachfront_luxury_property.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MA-23456",
+    "createdAt": "2025-11-30T19:39:35.651Z",
+    "updatedAt": "2025-11-30T19:39:35.651Z"
+  },
+  {
+    "id": 7,
+    "agentId": 1,
+    "title": "Luxury Penthouse - Madrid",
+    "description": "Stunning penthouse in city center with panoramic views",
+    "location": "Madrid, Centro",
+    "propertyType": "apartment",
+    "price": "450.00",
+    "priceType": "night",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 180,
+    "amenities": [
+      "Terrace",
+      "City View",
+      "AC",
+      "WiFi",
+      "Gym"
+    ],
+    "images": [
+      "/assets/generated_images/contemporary_penthouse_interior.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MD-34567",
+    "createdAt": "2025-11-30T19:39:35.651Z",
+    "updatedAt": "2025-11-30T19:39:35.651Z"
+  },
+  {
+    "id": 5,
+    "agentId": 1,
+    "title": "Downtown Modern Loft",
+    "description": "Industrial-style loft in the city center. High ceilings and natural light throughout.",
+    "location": "Malaga Centro",
+    "propertyType": "apartment",
+    "price": "180.00",
+    "priceType": "night",
+    "beds": 2,
+    "baths": 2,
+    "sqm": 85,
+    "amenities": [
+      "Central",
+      "Design",
+      "Wifi",
+      "AC"
+    ],
+    "images": [
+      "/assets/generated_images/downtown_industrial_loft.png"
+    ],
+    "status": "",
+    "licenseNumber": "VUT-MA-56789",
+    "createdAt": "2025-11-29T18:33:09.359Z",
+    "updatedAt": "2025-12-01T12:17:56.863Z"
+  },
+  {
+    "id": 8,
+    "agentId": 8,
+    "title": "Sunny Beach Villa",
+    "description": "Beautiful beachfront villa with stunning ocean views and private pool. Perfect for family vacations.",
+    "location": "Estepona, Malaga",
+    "propertyType": "villa",
+    "price": "450.00",
+    "priceType": "night",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 280,
+    "amenities": [
+      "pool",
+      "wifi",
+      "parking",
+      "beach_access",
+      "bbq"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12345",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 9,
+    "agentId": 8,
+    "title": "Cozy Mountain Retreat",
+    "description": "Charming mountain cottage with panoramic views. Ideal for nature lovers and hikers.",
+    "location": "Ronda, Malaga",
+    "propertyType": "villa",
+    "price": "180.00",
+    "priceType": "night",
+    "beds": 2,
+    "baths": 1,
+    "sqm": 90,
+    "amenities": [
+      "wifi",
+      "parking",
+      "fireplace",
+      "garden"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12346",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 10,
+    "agentId": 9,
+    "title": "Luxury Mediterranean Penthouse",
+    "description": "Stunning penthouse with wrap-around terrace and sea views. High-end finishes throughout.",
+    "location": "Marbella, Costa del Sol",
+    "propertyType": "apartment",
+    "price": "650.00",
+    "priceType": "night",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 200,
+    "amenities": [
+      "pool",
+      "wifi",
+      "parking",
+      "gym",
+      "concierge",
+      "terrace"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12347",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 11,
+    "agentId": 9,
+    "title": "Seaside Studio Escape",
+    "description": "Compact but stylish studio just steps from the beach. Perfect for couples or solo travelers.",
+    "location": "Benalmadena, Costa del Sol",
+    "propertyType": "studio",
+    "price": "95.00",
+    "priceType": "night",
+    "beds": 1,
+    "baths": 1,
+    "sqm": 45,
+    "amenities": [
+      "wifi",
+      "beach_access",
+      "air_conditioning"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12348",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 12,
+    "agentId": 10,
+    "title": "Costa del Sol Family Apartment",
+    "description": "Spacious family apartment with pool access and close to local attractions.",
+    "location": "Torremolinos, Malaga",
+    "propertyType": "apartment",
+    "price": "220.00",
+    "priceType": "night",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 120,
+    "amenities": [
+      "pool",
+      "wifi",
+      "parking",
+      "playground",
+      "air_conditioning"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12349",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 13,
+    "agentId": 2,
+    "title": "Coastal Charm Townhouse",
+    "description": "Beautiful townhouse in quiet residential area with sea views from rooftop terrace.",
+    "location": "Fuengirola, Costa del Sol",
+    "propertyType": "villa",
+    "price": "320.00",
+    "priceType": "night",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 150,
+    "amenities": [
+      "wifi",
+      "parking",
+      "terrace",
+      "garden",
+      "bbq"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12350",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  },
+  {
+    "id": 14,
+    "agentId": 3,
+    "title": "Urban Chic Loft",
+    "description": "Modern industrial-style loft in the heart of the city. Walking distance to restaurants and nightlife.",
+    "location": "Malaga Centro",
+    "propertyType": "apartment",
+    "price": "175.00",
+    "priceType": "night",
+    "beds": 2,
+    "baths": 1,
+    "sqm": 85,
+    "amenities": [
+      "wifi",
+      "air_conditioning",
+      "smart_tv"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VFT-MA-12351",
+    "createdAt": "2025-12-01T12:34:12.511Z",
+    "updatedAt": "2025-12-01T12:34:12.511Z"
+  }
+]

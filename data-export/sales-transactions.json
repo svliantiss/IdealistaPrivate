@@ -1,0 +1,28 @@
+[
+  {
+    "id": 5,
+    "propertyId": 3,
+    "sellerAgentId": 1,
+    "buyerAgentId": 2,
+    "buyerName": "Robert Schmidt",
+    "buyerEmail": "robert.schmidt@email.com",
+    "buyerPhone": "+49 175 1234567",
+    "salePrice": "950000.00",
+    "saleDate": "2025-09-15T00:00:00.000Z",
+    "status": "completed",
+    "createdAt": "2025-11-30T19:11:43.631Z"
+  },
+  {
+    "id": 6,
+    "propertyId": 4,
+    "sellerAgentId": 2,
+    "buyerAgentId": 1,
+    "buyerName": "Isabella Moretti",
+    "buyerEmail": "isabella.moretti@email.com",
+    "buyerPhone": "+39 331 9876543",
+    "salePrice": "750000.00",
+    "saleDate": "2025-10-01T00:00:00.000Z",
+    "status": "completed",
+    "createdAt": "2025-11-30T19:11:43.655Z"
+  }
+]

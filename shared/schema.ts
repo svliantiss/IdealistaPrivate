@@ -1,203 +1,169 @@
-import { pgTable, text, integer, timestamp, decimal, serial } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
+// Prisma types
+import type { 
+  Agent as PrismaAgent,
+  Property as PrismaProperty,
+  Booking as PrismaBooking,
+  Commission as PrismaCommission,
+  SalesProperty as PrismaSalesProperty,
+  SalesTransaction as PrismaSalesTransaction,
+  SalesCommission as PrismaSalesCommission,
+  PropertyAvailability as PrismaPropertyAvailability,
+  AgentAmenity as PrismaAgentAmenity,
+} from "@prisma/client";
+
 import { z } from "zod";
 
-// Agents Table
-export const agents = pgTable("agents", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  agency: text("agency"),
-  phone: text("phone"),
-  agencyPhone: text("agency_phone"),
-  agencyEmail: text("agency_email"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Re-export Prisma types
+export type Agent = PrismaAgent;
+export type Property = PrismaProperty;
+export type Booking = PrismaBooking;
+export type Commission = PrismaCommission;
+export type SalesProperty = PrismaSalesProperty;
+export type SalesTransaction = PrismaSalesTransaction;
+export type SalesCommission = PrismaSalesCommission;
+export type PropertyAvailability = PrismaPropertyAvailability;
+export type AgentAmenity = PrismaAgentAmenity;
+
+// Zod validation schemas for inserts (validation only, not type generation)
+
+// Agent validation
+export const insertAgentSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  agency: z.string().optional(),
+  phone: z.string().optional(),
+  agencyPhone: z.string().optional(),
+  agencyEmail: z.string().email().optional().or(z.literal("")),
 });
 
-export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true });
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
-export type Agent = typeof agents.$inferSelect;
 
-// Properties Table
-export const properties = pgTable("properties", {
-  id: serial("id").primaryKey(),
-  agentId: integer("agent_id").notNull().references(() => agents.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  location: text("location").notNull(),
-  propertyType: text("property_type").notNull(), // villa, apartment, studio
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  priceType: text("price_type").notNull().default("night"), // night, week, month
-  beds: integer("beds").notNull(),
-  baths: integer("baths").notNull(),
-  sqm: integer("sqm").notNull(),
-  amenities: text("amenities").array().notNull().default(sql`ARRAY[]::text[]`),
-  images: text("images").array().notNull().default(sql`ARRAY[]::text[]`),
-  status: text("status").notNull().default("draft"), // draft, active, inactive
-  licenseNumber: text("license_number"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Property validation
+export const insertPropertySchema = z.object({
+  agentId: z.number().int().positive(),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  location: z.string().min(1),
+  propertyType: z.string().min(1),
+  price: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  priceType: z.string().default("night"),
+  beds: z.number().int().min(0),
+  baths: z.number().int().min(0),
+  sqm: z.number().int().positive(),
+  amenities: z.array(z.string()).default([]),
+  images: z.array(z.string()).default([]),
+  status: z.string().default("draft"),
+  licenseNumber: z.string().optional(),
 });
 
-export const insertPropertySchema = createInsertSchema(properties).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
-export type Property = typeof properties.$inferSelect;
 
-// Bookings Table
-export const bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  propertyId: integer("property_id").notNull().references(() => properties.id),
-  ownerAgentId: integer("owner_agent_id").notNull().references(() => agents.id),
-  bookingAgentId: integer("booking_agent_id").notNull().references(() => agents.id),
-  clientName: text("client_name").notNull(),
-  clientEmail: text("client_email").notNull(),
-  clientPhone: text("client_phone"),
-  checkIn: timestamp("check_in").notNull(),
-  checkOut: timestamp("check_out").notNull(),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // pending, confirmed, paid, cancelled, cancellation_requested, archived
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Booking validation
+export const insertBookingSchema = z.object({
+  propertyId: z.number().int().positive(),
+  ownerAgentId: z.number().int().positive(),
+  bookingAgentId: z.number().int().positive(),
+  clientName: z.string().min(1),
+  clientEmail: z.string().email(),
+  clientPhone: z.string().optional(),
+  checkIn: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  checkOut: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  totalAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  status: z.string().default("pending"),
 });
 
-export const insertBookingSchema = createInsertSchema(bookings, {
-  checkIn: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
-  checkOut: z.string().or(z.date()).transform((val) => typeof val === 'string' ? new Date(val) : val),
-}).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
-export type Booking = typeof bookings.$inferSelect;
 
-// Commission Tracking Table
-export const commissions = pgTable("commissions", {
-  id: serial("id").primaryKey(),
-  bookingId: integer("booking_id").notNull().references(() => bookings.id),
-  ownerAgentId: integer("owner_agent_id").notNull().references(() => agents.id),
-  bookingAgentId: integer("booking_agent_id").notNull().references(() => agents.id),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  ownerCommission: decimal("owner_commission", { precision: 10, scale: 2 }).notNull(),
-  bookingCommission: decimal("booking_commission", { precision: 10, scale: 2 }).notNull(),
-  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
-  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull().default("10.00"), // percentage
-  status: text("status").notNull().default("pending"), // pending, paid
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Commission validation
+export const insertCommissionSchema = z.object({
+  bookingId: z.number().int().positive(),
+  ownerAgentId: z.number().int().positive(),
+  bookingAgentId: z.number().int().positive(),
+  totalAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  ownerCommission: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  bookingCommission: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  platformFee: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  commissionRate: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  status: z.string().default("pending"),
 });
 
-export const insertCommissionSchema = createInsertSchema(commissions).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
-export type Commission = typeof commissions.$inferSelect;
 
-// Sales Properties Table (For Sale listings)
-export const salesProperties = pgTable("sales_properties", {
-  id: serial("id").primaryKey(),
-  agentId: integer("agent_id").notNull().references(() => agents.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  location: text("location").notNull(),
-  propertyType: text("property_type").notNull(), // villa, apartment, studio, townhouse, etc.
-  price: decimal("price", { precision: 12, scale: 2 }).notNull(), // sale price
-  beds: integer("beds").notNull(),
-  baths: integer("baths").notNull(),
-  sqm: integer("sqm").notNull(),
-  amenities: text("amenities").array().notNull().default(sql`ARRAY[]::text[]`),
-  images: text("images").array().notNull().default(sql`ARRAY[]::text[]`),
-  status: text("status").notNull().default("draft"), // draft, active, inactive, sold
-  licenseNumber: text("license_number"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Sales Property validation
+export const insertSalesPropertySchema = z.object({
+  agentId: z.number().int().positive(),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  location: z.string().min(1),
+  propertyType: z.string().min(1),
+  price: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  beds: z.number().int().min(0),
+  baths: z.number().int().min(0),
+  sqm: z.number().int().positive(),
+  amenities: z.array(z.string()).default([]),
+  images: z.array(z.string()).default([]),
+  status: z.string().default("draft"),
+  licenseNumber: z.string().optional(),
 });
 
-export const insertSalesPropertySchema = createInsertSchema(salesProperties).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
-});
 export type InsertSalesProperty = z.infer<typeof insertSalesPropertySchema>;
-export type SalesProperty = typeof salesProperties.$inferSelect;
 
-// Sales Transactions Table
-export const salesTransactions = pgTable("sales_transactions", {
-  id: serial("id").primaryKey(),
-  propertyId: integer("property_id").notNull().references(() => salesProperties.id),
-  sellerAgentId: integer("seller_agent_id").notNull().references(() => agents.id),
-  buyerAgentId: integer("buyer_agent_id").notNull().references(() => agents.id),
-  buyerName: text("buyer_name").notNull(),
-  buyerEmail: text("buyer_email").notNull(),
-  buyerPhone: text("buyer_phone"),
-  salePrice: decimal("sale_price", { precision: 12, scale: 2 }).notNull(),
-  saleDate: timestamp("sale_date").notNull(),
-  status: text("status").notNull().default("pending"), // pending, completed, cancelled
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Sales Transaction validation
+export const insertSalesTransactionSchema = z.object({
+  propertyId: z.number().int().positive(),
+  sellerAgentId: z.number().int().positive(),
+  buyerAgentId: z.number().int().positive(),
+  buyerName: z.string().min(1),
+  buyerEmail: z.string().email(),
+  buyerPhone: z.string().optional(),
+  salePrice: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  saleDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  status: z.string().default("pending"),
 });
 
-export const insertSalesTransactionSchema = createInsertSchema(salesTransactions).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertSalesTransaction = z.infer<typeof insertSalesTransactionSchema>;
-export type SalesTransaction = typeof salesTransactions.$inferSelect;
 
-// Sales Commissions Table
-export const salesCommissions = pgTable("sales_commissions", {
-  id: serial("id").primaryKey(),
-  transactionId: integer("transaction_id").notNull().references(() => salesTransactions.id),
-  sellerAgentId: integer("seller_agent_id").notNull().references(() => agents.id),
-  buyerAgentId: integer("buyer_agent_id").notNull().references(() => agents.id),
-  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  sellerCommission: decimal("seller_commission", { precision: 12, scale: 2 }).notNull(),
-  buyerCommission: decimal("buyer_commission", { precision: 12, scale: 2 }).notNull(),
-  platformFee: decimal("platform_fee", { precision: 12, scale: 2 }).notNull(),
-  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull().default("4.00"), // percentage
-  status: text("status").notNull().default("pending"), // pending, paid
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Sales Commission validation
+export const insertSalesCommissionSchema = z.object({
+  transactionId: z.number().int().positive(),
+  sellerAgentId: z.number().int().positive(),
+  buyerAgentId: z.number().int().positive(),
+  totalAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  sellerCommission: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  buyerCommission: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  platformFee: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  commissionRate: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  status: z.string().default("pending"),
 });
 
-export const insertSalesCommissionSchema = createInsertSchema(salesCommissions).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertSalesCommission = z.infer<typeof insertSalesCommissionSchema>;
-export type SalesCommission = typeof salesCommissions.$inferSelect;
 
-// Property Availability Table (for rental calendar)
-export const propertyAvailability = pgTable("property_availability", {
-  id: serial("id").primaryKey(),
-  propertyId: integer("property_id").notNull().references(() => properties.id),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  isAvailable: integer("is_available").notNull().default(1), // 1 = available, 0 = unavailable/booked
-  bookingId: integer("booking_id").references(() => bookings.id), // link to booking if unavailable due to booking
-  notes: text("notes"), // optional notes (e.g., "owner blocked", "maintenance")
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Property Availability validation
+export const insertPropertyAvailabilitySchema = z.object({
+  propertyId: z.number().int().positive(),
+  startDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  endDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  isAvailable: z.number().int().default(1),
+  bookingId: z.number().int().positive().optional(),
+  notes: z.string().optional(),
 });
 
-export const insertPropertyAvailabilitySchema = createInsertSchema(propertyAvailability).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertPropertyAvailability = z.infer<typeof insertPropertyAvailabilitySchema>;
-export type PropertyAvailability = typeof propertyAvailability.$inferSelect;
 
-// Agent Custom Amenities Table
-export const agentAmenities = pgTable("agent_amenities", {
-  id: serial("id").primaryKey(),
-  agentId: integer("agent_id").notNull().references(() => agents.id),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Agent Amenity validation
+export const insertAgentAmenitySchema = z.object({
+  agentId: z.number().int().positive(),
+  name: z.string().min(1),
 });
 
-export const insertAgentAmenitySchema = createInsertSchema(agentAmenities).omit({ 
-  id: true, 
-  createdAt: true 
-});
 export type InsertAgentAmenity = z.infer<typeof insertAgentAmenitySchema>;
-export type AgentAmenity = typeof agentAmenities.$inferSelect;

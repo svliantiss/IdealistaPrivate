@@ -1,0 +1,341 @@
+[
+  {
+    "id": 3,
+    "agentId": 1,
+    "title": "Modern Luxury Villa - SOLD",
+    "description": "Stunning modern villa with sea views and premium finishes",
+    "location": "Marbella, Golden Mile",
+    "propertyType": "villa",
+    "price": "950000.00",
+    "beds": 5,
+    "baths": 4,
+    "sqm": 500,
+    "amenities": [
+      "Sea View",
+      "Pool",
+      "Garden",
+      "Parking",
+      "Gym"
+    ],
+    "images": [
+      "/assets/generated_images/beachfront_luxury_property.png"
+    ],
+    "status": "sold",
+    "licenseNumber": "VUT-MA-SOLD-001",
+    "createdAt": "2025-08-01T10:30:00.000Z",
+    "updatedAt": "2025-11-30T19:11:43.207Z"
+  },
+  {
+    "id": 4,
+    "agentId": 2,
+    "title": "Contemporary Penthouse - SOLD",
+    "description": "High-end penthouse in prestigious city center location",
+    "location": "Madrid Centro",
+    "propertyType": "apartment",
+    "price": "750000.00",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 350,
+    "amenities": [
+      "Terrace",
+      "Parking",
+      "Smart Home",
+      "Security"
+    ],
+    "images": [
+      "/assets/generated_images/contemporary_penthouse_interior.png"
+    ],
+    "status": "sold",
+    "licenseNumber": "VUT-MD-SOLD-002",
+    "createdAt": "2025-08-15T14:45:00.000Z",
+    "updatedAt": "2025-11-30T19:11:43.207Z"
+  },
+  {
+    "id": 5,
+    "agentId": 1,
+    "title": "Modern Villa with Garden",
+    "description": "Beautiful contemporary villa with spacious garden and pool area. Perfect for families or investors.",
+    "location": "Barcelona, Eixample",
+    "propertyType": "villa",
+    "price": "1200000.00",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 450,
+    "amenities": [
+      "Garden",
+      "Pool",
+      "Garage",
+      "Terrace",
+      "Security"
+    ],
+    "images": [
+      "/assets/generated_images/modern_luxury_villa_with_pool.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-BCN-45678",
+    "createdAt": "2025-11-30T19:42:29.507Z",
+    "updatedAt": "2025-11-30T19:42:29.507Z"
+  },
+  {
+    "id": 6,
+    "agentId": 1,
+    "title": "Luxury Apartment with Terrace",
+    "description": "Spacious luxury apartment in prime location with panoramic city views and private terrace.",
+    "location": "Valencia, Turia",
+    "propertyType": "apartment",
+    "price": "850000.00",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 280,
+    "amenities": [
+      "Terrace",
+      "City View",
+      "Parking",
+      "Security",
+      "AC"
+    ],
+    "images": [
+      "/assets/generated_images/contemporary_penthouse_interior.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-VLC-56789",
+    "createdAt": "2025-11-30T19:42:29.507Z",
+    "updatedAt": "2025-11-30T19:42:29.507Z"
+  },
+  {
+    "id": 7,
+    "agentId": 1,
+    "title": "Beachfront Property with Views",
+    "description": "Stunning beachfront property with panoramic sea views and private beach access.",
+    "location": "Málaga, Playa",
+    "propertyType": "villa",
+    "price": "950000.00",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 380,
+    "amenities": [
+      "Beach Access",
+      "Pool",
+      "Terrace",
+      "Garage",
+      "Security"
+    ],
+    "images": [
+      "/assets/generated_images/beachfront_luxury_property.png"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-MAG-67890",
+    "createdAt": "2025-11-30T20:11:59.736Z",
+    "updatedAt": "2025-11-30T20:11:59.736Z"
+  },
+  {
+    "id": 8,
+    "agentId": 2,
+    "title": "Mediterranean Coastal Villa",
+    "description": "Stunning Mediterranean-style villa with direct beach access and panoramic ocean views. Features include a private pool, landscaped gardens, and open-plan living.",
+    "location": "Marbella, Malaga",
+    "propertyType": "villa",
+    "price": "1450000.00",
+    "beds": 5,
+    "baths": 4,
+    "sqm": 550,
+    "amenities": [
+      "Beach Access",
+      "Pool",
+      "Garden",
+      "Parking",
+      "Security",
+      "Sea View"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-001",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 9,
+    "agentId": 3,
+    "title": "City Center Penthouse",
+    "description": "Exclusive penthouse in prime city location with 360-degree views. Modern design with high-end finishes, private rooftop terrace with jacuzzi.",
+    "location": "Malaga Centro",
+    "propertyType": "apartment",
+    "price": "780000.00",
+    "beds": 3,
+    "baths": 2,
+    "sqm": 220,
+    "amenities": [
+      "Terrace",
+      "Jacuzzi",
+      "City View",
+      "Parking",
+      "Gym Access",
+      "Concierge"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-002",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 10,
+    "agentId": 4,
+    "title": "Golf Resort Villa",
+    "description": "Elegant villa overlooking the 18th hole of championship golf course. Features include a private cinema room, wine cellar, and infinity pool.",
+    "location": "Nueva Andalucia, Marbella",
+    "propertyType": "villa",
+    "price": "2200000.00",
+    "beds": 6,
+    "baths": 5,
+    "sqm": 680,
+    "amenities": [
+      "Golf View",
+      "Pool",
+      "Cinema Room",
+      "Wine Cellar",
+      "Garage",
+      "Security"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-003",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 11,
+    "agentId": 8,
+    "title": "Sunny Beachfront Apartment",
+    "description": "Light-filled apartment just steps from the beach. Recently renovated with modern kitchen, marble bathrooms, and a spacious terrace for entertaining.",
+    "location": "Estepona, Costa del Sol",
+    "propertyType": "apartment",
+    "price": "495000.00",
+    "beds": 2,
+    "baths": 2,
+    "sqm": 120,
+    "amenities": [
+      "Beachfront",
+      "Terrace",
+      "Pool",
+      "Parking",
+      "Storage"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-004",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 12,
+    "agentId": 9,
+    "title": "Luxury Mediterranean Estate",
+    "description": "Magnificent estate with main house and guest house set in private grounds. Includes tennis court, heated pool, and mature landscaped gardens.",
+    "location": "La Zagaleta, Marbella",
+    "propertyType": "villa",
+    "price": "4500000.00",
+    "beds": 8,
+    "baths": 7,
+    "sqm": 1200,
+    "amenities": [
+      "Tennis Court",
+      "Heated Pool",
+      "Guest House",
+      "Staff Quarters",
+      "Security",
+      "Garden"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-005",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 13,
+    "agentId": 10,
+    "title": "Modern Urban Loft",
+    "description": "Industrial-chic loft conversion in historic building. High ceilings, exposed brick, and contemporary design. Walking distance to restaurants and culture.",
+    "location": "Malaga, Soho",
+    "propertyType": "apartment",
+    "price": "385000.00",
+    "beds": 2,
+    "baths": 1,
+    "sqm": 95,
+    "amenities": [
+      "Historic Building",
+      "High Ceilings",
+      "Central Location",
+      "Gym"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-006",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 14,
+    "agentId": 2,
+    "title": "Hillside Family Home",
+    "description": "Charming family home with mountain views and large garden. Features include a separate home office, playroom, and covered outdoor kitchen.",
+    "location": "Benahavis, Marbella",
+    "propertyType": "villa",
+    "price": "875000.00",
+    "beds": 4,
+    "baths": 3,
+    "sqm": 350,
+    "amenities": [
+      "Mountain View",
+      "Garden",
+      "Home Office",
+      "Outdoor Kitchen",
+      "Garage"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-007",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  },
+  {
+    "id": 15,
+    "agentId": 3,
+    "title": "Boutique Studio with Sea View",
+    "description": "Stylish studio apartment in exclusive building. Perfect as investment property or holiday home. Sea views from private balcony.",
+    "location": "Benalmadena, Costa del Sol",
+    "propertyType": "studio",
+    "price": "185000.00",
+    "beds": 1,
+    "baths": 1,
+    "sqm": 48,
+    "amenities": [
+      "Sea View",
+      "Balcony",
+      "Pool Access",
+      "Furnished"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"
+    ],
+    "status": "active",
+    "licenseNumber": "VUT-SALE-008",
+    "createdAt": "2025-12-01T13:06:36.151Z",
+    "updatedAt": "2025-12-01T13:06:36.151Z"
+  }
+]

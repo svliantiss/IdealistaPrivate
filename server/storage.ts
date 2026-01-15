@@ -17,18 +17,8 @@ import {
   type InsertPropertyAvailability,
   type AgentAmenity,
   type InsertAgentAmenity,
-  agents,
-  properties,
-  bookings,
-  commissions,
-  salesProperties,
-  salesTransactions,
-  salesCommissions,
-  propertyAvailability,
-  agentAmenities
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, gte, lte, ilike, or } from "drizzle-orm";
+import { prisma } from "./db";
 
 export interface IStorage {
   // Agent methods
@@ -108,40 +98,53 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Agent methods
   async getAgent(id: number): Promise<Agent | undefined> {
-    const [agent] = await db.select().from(agents).where(eq(agents.id, id));
+    const agent = await prisma.agent.findUnique({
+      where: { id },
+    });
     return agent || undefined;
   }
 
   async getAgentByEmail(email: string): Promise<Agent | undefined> {
-    const [agent] = await db.select().from(agents).where(eq(agents.email, email));
+    const agent = await prisma.agent.findUnique({
+      where: { email },
+    });
     return agent || undefined;
   }
 
   async getAllAgents(): Promise<Agent[]> {
-    return await db.select().from(agents);
+    return await prisma.agent.findMany();
   }
 
   async createAgent(insertAgent: InsertAgent): Promise<Agent> {
-    const [agent] = await db.insert(agents).values(insertAgent).returning();
-    return agent;
+    return await prisma.agent.create({
+      data: insertAgent,
+    });
   }
 
   async getAgentsByAgency(agency: string): Promise<Agent[]> {
-    return await db.select().from(agents).where(eq(agents.agency, agency));
+    return await prisma.agent.findMany({
+      where: { agency },
+    });
   }
 
   async deleteAgent(id: number): Promise<void> {
-    await db.delete(agents).where(eq(agents.id, id));
+    await prisma.agent.delete({
+      where: { id },
+    });
   }
 
   // Property methods
   async getProperty(id: number): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    const property = await prisma.property.findUnique({
+      where: { id },
+    });
     return property || undefined;
   }
 
   async getPropertiesByAgent(agentId: number): Promise<Property[]> {
-    return await db.select().from(properties).where(eq(properties.agentId, agentId));
+    return await prisma.property.findMany({
+      where: { agentId },
+    });
   }
 
   async getAllProperties(filters?: {
@@ -151,88 +154,95 @@ export class DatabaseStorage implements IStorage {
     maxPrice?: number;
     status?: string;
   }): Promise<Property[]> {
-    let query = db.select().from(properties);
-    
-    const conditions = [];
+    const where: any = {};
     
     if (filters?.location) {
-      conditions.push(ilike(properties.location, `%${filters.location}%`));
+      where.location = { contains: filters.location, mode: 'insensitive' };
     }
     if (filters?.propertyType) {
-      conditions.push(eq(properties.propertyType, filters.propertyType));
+      where.propertyType = filters.propertyType;
     }
     if (filters?.status) {
-      conditions.push(eq(properties.status, filters.status));
+      where.status = filters.status;
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-    
-    return await query;
+    return await prisma.property.findMany({ where });
   }
 
   async createProperty(property: InsertProperty): Promise<Property> {
-    const [newProperty] = await db.insert(properties).values(property).returning();
-    return newProperty;
+    return await prisma.property.create({
+      data: property,
+    });
   }
 
   async updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property | undefined> {
-    const [updated] = await db
-      .update(properties)
-      .set({ ...property, updatedAt: new Date() })
-      .where(eq(properties.id, id))
-      .returning();
-    return updated || undefined;
+    try {
+      const updated = await prisma.property.update({
+        where: { id },
+        data: { ...property, updatedAt: new Date() },
+      });
+      return updated;
+    } catch {
+      return undefined;
+    }
   }
 
   async deleteProperty(id: number): Promise<void> {
-    await db.delete(properties).where(eq(properties.id, id));
+    await prisma.property.delete({
+      where: { id },
+    });
   }
 
   // Booking methods
   async getBooking(id: number): Promise<Booking | undefined> {
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+    });
     return booking || undefined;
   }
 
   async getBookingsByProperty(propertyId: number): Promise<Booking[]> {
-    return await db.select().from(bookings).where(eq(bookings.propertyId, propertyId));
+    return await prisma.booking.findMany({
+      where: { propertyId },
+    });
   }
 
   async getBookingsByAgent(agentId: number): Promise<Booking[]> {
-    return await db
-      .select()
-      .from(bookings)
-      .where(
-        or(
-          eq(bookings.ownerAgentId, agentId),
-          eq(bookings.bookingAgentId, agentId)
-        )
-      );
+    return await prisma.booking.findMany({
+      where: {
+        OR: [
+          { ownerAgentId: agentId },
+          { bookingAgentId: agentId },
+        ],
+      },
+    });
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    return await db.select().from(bookings);
+    return await prisma.booking.findMany();
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
-    const [newBooking] = await db.insert(bookings).values(booking).returning();
-    return newBooking;
+    return await prisma.booking.create({
+      data: booking,
+    });
   }
 
   async updateBookingStatus(id: number, status: string): Promise<Booking | undefined> {
-    const [updated] = await db
-      .update(bookings)
-      .set({ status })
-      .where(eq(bookings.id, id))
-      .returning();
-    return updated || undefined;
+    try {
+      const updated = await prisma.booking.update({
+        where: { id },
+        data: { status },
+      });
+      return updated;
+    } catch {
+      return undefined;
+    }
   }
 
   async archivePastBookings(): Promise<number> {
     const now = new Date();
-    const allBookings = await db.select().from(bookings);
+    const allBookings = await prisma.booking.findMany();
     let archivedCount = 0;
     
     for (const booking of allBookings) {
@@ -241,9 +251,10 @@ export class DatabaseStorage implements IStorage {
       const shouldArchive = isPast && ['pending', 'confirmed', 'paid'].includes(booking.status);
       
       if (shouldArchive) {
-        await db.update(bookings)
-          .set({ status: 'archived' })
-          .where(eq(bookings.id, booking.id));
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { status: 'archived' },
+        });
         archivedCount++;
       }
     }
@@ -253,35 +264,41 @@ export class DatabaseStorage implements IStorage {
 
   // Commission methods
   async getCommissionByBooking(bookingId: number): Promise<Commission | undefined> {
-    const [commission] = await db.select().from(commissions).where(eq(commissions.bookingId, bookingId));
+    const commission = await prisma.commission.findUnique({
+      where: { bookingId },
+    });
     return commission || undefined;
   }
 
   async getCommissionsByAgent(agentId: number): Promise<Commission[]> {
-    return await db
-      .select()
-      .from(commissions)
-      .where(
-        or(
-          eq(commissions.ownerAgentId, agentId),
-          eq(commissions.bookingAgentId, agentId)
-        )
-      );
+    return await prisma.commission.findMany({
+      where: {
+        OR: [
+          { ownerAgentId: agentId },
+          { bookingAgentId: agentId },
+        ],
+      },
+    });
   }
 
   async createCommission(commission: InsertCommission): Promise<Commission> {
-    const [newCommission] = await db.insert(commissions).values(commission).returning();
-    return newCommission;
+    return await prisma.commission.create({
+      data: commission,
+    });
   }
 
   // Sales Property methods
   async getSalesProperty(id: number): Promise<SalesProperty | undefined> {
-    const [property] = await db.select().from(salesProperties).where(eq(salesProperties.id, id));
+    const property = await prisma.salesProperty.findUnique({
+      where: { id },
+    });
     return property || undefined;
   }
 
   async getSalesPropertiesByAgent(agentId: number): Promise<SalesProperty[]> {
-    return await db.select().from(salesProperties).where(eq(salesProperties.agentId, agentId));
+    return await prisma.salesProperty.findMany({
+      where: { agentId },
+    });
   }
 
   async getAllSalesProperties(filters?: {
@@ -291,119 +308,139 @@ export class DatabaseStorage implements IStorage {
     maxPrice?: number;
     status?: string;
   }): Promise<SalesProperty[]> {
-    let query = db.select().from(salesProperties);
-    const conditions = [];
+    const where: any = {};
     
     if (filters?.location) {
-      conditions.push(ilike(salesProperties.location, `%${filters.location}%`));
+      where.location = { contains: filters.location, mode: 'insensitive' };
     }
     if (filters?.propertyType) {
-      conditions.push(eq(salesProperties.propertyType, filters.propertyType));
+      where.propertyType = filters.propertyType;
     }
     if (filters?.status) {
-      conditions.push(eq(salesProperties.status, filters.status));
+      where.status = filters.status;
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-    
-    return await query;
+    return await prisma.salesProperty.findMany({ where });
   }
 
   async createSalesProperty(property: InsertSalesProperty): Promise<SalesProperty> {
-    const [newProperty] = await db.insert(salesProperties).values(property).returning();
-    return newProperty;
+    return await prisma.salesProperty.create({
+      data: property,
+    });
   }
 
   async updateSalesProperty(id: number, property: Partial<InsertSalesProperty>): Promise<SalesProperty | undefined> {
-    const [updated] = await db
-      .update(salesProperties)
-      .set({ ...property, updatedAt: new Date() })
-      .where(eq(salesProperties.id, id))
-      .returning();
-    return updated || undefined;
+    try {
+      const updated = await prisma.salesProperty.update({
+        where: { id },
+        data: { ...property, updatedAt: new Date() },
+      });
+      return updated;
+    } catch {
+      return undefined;
+    }
   }
 
   async deleteSalesProperty(id: number): Promise<void> {
-    await db.delete(salesProperties).where(eq(salesProperties.id, id));
+    await prisma.salesProperty.delete({
+      where: { id },
+    });
   }
 
   // Sales Transaction methods
   async getSalesTransaction(id: number): Promise<SalesTransaction | undefined> {
-    const [transaction] = await db.select().from(salesTransactions).where(eq(salesTransactions.id, id));
+    const transaction = await prisma.salesTransaction.findUnique({
+      where: { id },
+    });
     return transaction || undefined;
   }
 
   async getSalesTransactionsByAgent(agentId: number): Promise<SalesTransaction[]> {
-    return await db.select().from(salesTransactions).where(
-      or(
-        eq(salesTransactions.sellerAgentId, agentId),
-        eq(salesTransactions.buyerAgentId, agentId)
-      )
-    );
+    return await prisma.salesTransaction.findMany({
+      where: {
+        OR: [
+          { sellerAgentId: agentId },
+          { buyerAgentId: agentId },
+        ],
+      },
+    });
   }
 
   async createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction> {
-    const [result] = await db.insert(salesTransactions).values(transaction).returning();
-    return result;
+    return await prisma.salesTransaction.create({
+      data: transaction,
+    });
   }
 
   async updateSalesTransactionStatus(id: number, status: string): Promise<SalesTransaction | undefined> {
-    const [updated] = await db
-      .update(salesTransactions)
-      .set({ status })
-      .where(eq(salesTransactions.id, id))
-      .returning();
-    return updated || undefined;
+    try {
+      const updated = await prisma.salesTransaction.update({
+        where: { id },
+        data: { status },
+      });
+      return updated;
+    } catch {
+      return undefined;
+    }
   }
 
   // Sales Commission methods
   async getSalesCommissionsByAgent(agentId: number): Promise<SalesCommission[]> {
-    return await db.select().from(salesCommissions).where(
-      or(
-        eq(salesCommissions.sellerAgentId, agentId),
-        eq(salesCommissions.buyerAgentId, agentId)
-      )
-    );
+    return await prisma.salesCommission.findMany({
+      where: {
+        OR: [
+          { sellerAgentId: agentId },
+          { buyerAgentId: agentId },
+        ],
+      },
+    });
   }
 
   async createSalesCommission(commission: InsertSalesCommission): Promise<SalesCommission> {
-    const [result] = await db.insert(salesCommissions).values(commission).returning();
-    return result;
+    return await prisma.salesCommission.create({
+      data: commission,
+    });
   }
 
   // Property Availability methods
   async getPropertyAvailability(propertyId: number): Promise<PropertyAvailability[]> {
-    return await db.select().from(propertyAvailability).where(eq(propertyAvailability.propertyId, propertyId));
+    return await prisma.propertyAvailability.findMany({
+      where: { propertyId },
+    });
   }
 
   async getAllPropertyAvailability(): Promise<PropertyAvailability[]> {
-    return await db.select().from(propertyAvailability);
+    return await prisma.propertyAvailability.findMany();
   }
 
   async createPropertyAvailability(availability: InsertPropertyAvailability): Promise<PropertyAvailability> {
-    const [result] = await db.insert(propertyAvailability).values(availability).returning();
-    return result;
+    return await prisma.propertyAvailability.create({
+      data: availability,
+    });
   }
 
   async updatePropertyAvailability(id: number, availability: Partial<InsertPropertyAvailability>): Promise<PropertyAvailability | undefined> {
-    const [updated] = await db
-      .update(propertyAvailability)
-      .set(availability)
-      .where(eq(propertyAvailability.id, id))
-      .returning();
-    return updated || undefined;
+    try {
+      const updated = await prisma.propertyAvailability.update({
+        where: { id },
+        data: availability,
+      });
+      return updated;
+    } catch {
+      return undefined;
+    }
   }
 
   async deletePropertyAvailability(id: number): Promise<void> {
-    await db.delete(propertyAvailability).where(eq(propertyAvailability.id, id));
+    await prisma.propertyAvailability.delete({
+      where: { id },
+    });
   }
 
   async deletePropertyAvailabilityByDates(propertyId: number, startDate: Date, endDate: Date): Promise<void> {
-    const allAvailability = await db.select().from(propertyAvailability).where(
-      eq(propertyAvailability.propertyId, propertyId)
-    );
+    const allAvailability = await prisma.propertyAvailability.findMany({
+      where: { propertyId },
+    });
     
     // Normalize target dates to date-only strings for comparison
     const targetStart = new Date(startDate).toISOString().split('T')[0];
@@ -416,7 +453,9 @@ export class DatabaseStorage implements IStorage {
       
       // Only delete if exact date match (this availability was created specifically for this booking)
       if (recordStart === targetStart && recordEnd === targetEnd) {
-        await db.delete(propertyAvailability).where(eq(propertyAvailability.id, record.id));
+        await prisma.propertyAvailability.delete({
+          where: { id: record.id },
+        });
         break; // Found and deleted the specific record, no need to continue
       }
     }
@@ -424,16 +463,21 @@ export class DatabaseStorage implements IStorage {
 
   // Agent Amenities methods
   async getAgentAmenities(agentId: number): Promise<AgentAmenity[]> {
-    return await db.select().from(agentAmenities).where(eq(agentAmenities.agentId, agentId));
+    return await prisma.agentAmenity.findMany({
+      where: { agentId },
+    });
   }
 
   async createAgentAmenity(amenity: InsertAgentAmenity): Promise<AgentAmenity> {
-    const [result] = await db.insert(agentAmenities).values(amenity).returning();
-    return result;
+    return await prisma.agentAmenity.create({
+      data: amenity,
+    });
   }
 
   async deleteAgentAmenity(id: number): Promise<void> {
-    await db.delete(agentAmenities).where(eq(agentAmenities.id, id));
+    await prisma.agentAmenity.delete({
+      where: { id },
+    });
   }
 }
 

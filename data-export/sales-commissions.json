@@ -1,0 +1,28 @@
+[
+  {
+    "id": 3,
+    "transactionId": 5,
+    "sellerAgentId": 1,
+    "buyerAgentId": 2,
+    "totalAmount": "950000.00",
+    "sellerCommission": "18240.00",
+    "buyerCommission": "18240.00",
+    "platformFee": "1520.00",
+    "commissionRate": "4.00",
+    "status": "completed",
+    "createdAt": "2025-11-30T19:11:43.672Z"
+  },
+  {
+    "id": 4,
+    "transactionId": 6,
+    "sellerAgentId": 2,
+    "buyerAgentId": 1,
+    "totalAmount": "750000.00",
+    "sellerCommission": "14400.00",
+    "buyerCommission": "14400.00",
+    "platformFee": "1200.00",
+    "commissionRate": "4.00",
+    "status": "completed",
+    "createdAt": "2025-11-30T19:11:43.692Z"
+  }
+]

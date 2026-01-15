@@ -1,0 +1,15 @@
+{
+  "exportDate": "2026-01-15T13:43:07.509Z",
+  "tables": {
+    "agents": 10,
+    "properties": 14,
+    "bookings": 22,
+    "commissions": 16,
+    "salesProperties": 13,
+    "salesTransactions": 2,
+    "salesCommissions": 2,
+    "propertyAvailability": 9,
+    "agentAmenities": 2
+  },
+  "totalRecords": 90
+}

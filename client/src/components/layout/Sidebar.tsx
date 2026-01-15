@@ -21,7 +21,7 @@ export function Sidebar() {
   );
 
   const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+    { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
     { icon: Users, label: "Team Stats", href: "/employee-stats" },
   ];
 

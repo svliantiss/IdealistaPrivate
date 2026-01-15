@@ -154,7 +154,7 @@ export default function SalesCommissions() {
     <Layout>
       <div className="p-8 space-y-6">
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/">
+          <Link href="/dashboard">
             <Button variant="ghost" size="icon" className="h-10 w-10" data-testid="button-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>

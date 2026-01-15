@@ -128,7 +128,7 @@ export default function Admin() {
             <span className="font-serif font-bold text-xl">RentNetAgents Admin</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="/" className="text-sm text-white/80 hover:text-white flex items-center gap-1">
+            <a href="/dashboard" className="text-sm text-white/80 hover:text-white flex items-center gap-1">
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </a>
             <Button 

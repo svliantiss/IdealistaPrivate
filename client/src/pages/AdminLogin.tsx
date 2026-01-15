@@ -84,7 +84,7 @@ export default function AdminLogin() {
           </form>
           
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            <a href="/" className="hover:text-primary underline">Back to Dashboard</a>
+            <a href="/dashboard" className="hover:text-primary underline">Back to Dashboard</a>
           </div>
         </CardContent>
       </Card>

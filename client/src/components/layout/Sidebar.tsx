@@ -135,15 +135,17 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
-          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
-            RV
+        <Link href="/account">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
+              RV
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium truncate">Ryan</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">Velmont Properties</p>
+            </div>
           </div>
-          <div className="overflow-hidden">
-            <p className="text-sm font-medium truncate">Ryan</p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">Velmont Properties</p>
-          </div>
-        </div>
+        </Link>
         <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/60 hover:text-destructive transition-colors">
           <LogOut className="h-4 w-4" />
           Sign Out

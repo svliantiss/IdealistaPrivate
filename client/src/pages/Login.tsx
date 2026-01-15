@@ -79,7 +79,12 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full" type="button">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                type="button"
+                onClick={() => setLocation("/onboarding")}
+              >
                 Sign up your agency
               </Button>
             </form>

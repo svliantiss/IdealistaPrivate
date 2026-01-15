@@ -24,12 +24,16 @@ import EmployeeStats from "@/pages/EmployeeStats";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 import PropertyDetails from "@/pages/PropertyDetails";
 import EditProperty from "@/pages/EditProperty";
+import Onboarding from "@/pages/Onboarding";
+import AccountSettings from "@/pages/AccountSettings";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/onboarding" component={Onboarding} />
+      <Route path="/account" component={AccountSettings} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/search" component={Search} />
       <Route path="/rentals/:id" component={PropertyDetails} />

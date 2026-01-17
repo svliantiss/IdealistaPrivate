@@ -15,13 +15,13 @@ model Agent {
   id              Int      @id @default(autoincrement())
   name            String
   email           String   @unique
-  website         String   
+  website         String?   
 
   // 🔐 Auth
-  emailVerified   Boolean  @default(false)
+  emailVerified   Boolean?  @default(false)
   onboardingStep  Int      @default(1)
   lastLoginAt     DateTime?
-  location        String
+  location        String?
   // Agency info (already exists)
   agency          String?
   phone           String?

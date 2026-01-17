@@ -9,18 +9,30 @@ datasource db {
   provider = "postgresql"
 }
 
+
 // Agents Table
 model Agent {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  agency       String?
-  phone        String?
-  agencyPhone  String?  @map("agency_phone")
-  agencyEmail  String?  @map("agency_email")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id              Int      @id @default(autoincrement())
+  name            String
+  email           String   @unique
+  website         String   
 
-  // Relations
+  // 🔐 Auth
+  emailVerified   Boolean  @default(false)
+  onboardingStep  Int      @default(1)
+  lastLoginAt     DateTime?
+  location        String
+  // Agency info (already exists)
+  agency          String?
+  phone           String?
+  color           String?
+  logo            String?
+  agencyPhone     String?  @map("agency_phone")
+  agencyEmail     String?  @map("agency_email")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations (unchanged)
   properties              Property[]
   ownedBookings          Booking[]            @relation("OwnerAgent")
   madeBookings           Booking[]            @relation("BookingAgent")
@@ -35,7 +47,6 @@ model Agent {
 
   @@map("agents")
 }
-
 // Properties Table (Rental Properties)
 model Property {
   id            Int      @id @default(autoincrement())
@@ -87,6 +98,18 @@ model Booking {
   availability    PropertyAvailability[]
 
   @@map("bookings")
+}
+
+model EmailOtp {
+  id         Int      @id @default(autoincrement())
+  email      String
+  codeHash   String   @map("code_hash")
+  expiresAt DateTime
+  used       Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("email_otps")
 }
 
 // Commission Tracking Table
@@ -199,6 +222,7 @@ model PropertyAvailability {
 
   @@map("property_availability")
 }
+
 
 // Agent Custom Amenities Table
 model AgentAmenity {

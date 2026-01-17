@@ -1,6 +1,6 @@
+import { storage } from "./storage";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
 import { insertPropertySchema, insertBookingSchema, insertCommissionSchema, insertAgentSchema, insertSalesPropertySchema, insertSalesTransactionSchema, insertSalesCommissionSchema, insertPropertyAvailabilitySchema, insertAgentAmenitySchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 

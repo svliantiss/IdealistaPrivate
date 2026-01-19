@@ -12,6 +12,10 @@ function getR2Credentials() {
     const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
     const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/7f66b6de-517e-40b6-bc43-923823ed68cc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageController.ts:15',message:'R2 credentials check',data:{hasAccessKey:!!accessKeyId,accessKeyPrefix:accessKeyId?.substring(0,8),hasSecret:!!secretAccessKey,secretPrefix:secretAccessKey?.substring(0,8)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     if (!accessKeyId || !secretAccessKey) {
         throw new Error("Missing Cloudflare R2 credentials");
     }
@@ -22,13 +26,20 @@ function getR2Credentials() {
 const { accessKeyId, secretAccessKey } = getR2Credentials();
 
 
-const s3 = new S3({
-  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+// #region agent log
+const region = process.env.CLOUDFLARE_R2_REGION || ''; // e.g., 'eu', 'apac'
+const regionSuffix = region ? `.${region}` : '';
+const r2Config = {
+  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}${regionSuffix}.r2.cloudflarestorage.com`,
   accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,
   secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY!,
   signatureVersion: "v4",
-  s3ForcePathStyle: false, // IMPORTANT
-});
+  s3ForcePathStyle: false,
+};
+fetch('http://127.0.0.1:7246/ingest/7f66b6de-517e-40b6-bc43-923823ed68cc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageController.ts:28',message:'S3 client config',data:{endpoint:r2Config.endpoint,accountId:process.env.CLOUDFLARE_ACCOUNT_ID,bucket:process.env.CLOUDFLARE_R2_BUCKET,region:region,signatureVersion:r2Config.signatureVersion,s3ForcePathStyle:r2Config.s3ForcePathStyle},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C,D,E'})}).catch(()=>{});
+// #endregion
+
+const s3 = new S3(r2Config);
 
 // Configure multer for memory storage
 const upload = multer({ 
@@ -98,8 +109,22 @@ export const directUploadController = async (req: express.Request, res: express.
             ContentType: file.mimetype,
         };
 
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/7f66b6de-517e-40b6-bc43-923823ed68cc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageController.ts:102',message:'Before R2 upload',data:{bucket:uploadParams.Bucket,key:uploadParams.Key,contentType:uploadParams.ContentType,bodySize:file.buffer.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,C'})}).catch(()=>{});
+        // #endregion
+
         console.log("☁️ [directUploadController] Uploading to R2...");
-        await s3.upload(uploadParams).promise();
+        try {
+            await s3.upload(uploadParams).promise();
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/7f66b6de-517e-40b6-bc43-923823ed68cc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageController.ts:110',message:'R2 upload SUCCESS',data:{bucket:uploadParams.Bucket,key:key},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+        } catch (uploadError: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7246/ingest/7f66b6de-517e-40b6-bc43-923823ed68cc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageController.ts:115',message:'R2 upload FAILED',data:{errorCode:uploadError.code,errorMessage:uploadError.message,statusCode:uploadError.statusCode,bucket:uploadParams.Bucket,endpoint:r2Config.endpoint},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+            // #endregion
+            throw uploadError;
+        }
 
         const publicUrl = `https://pub-${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.dev/${process.env.CLOUDFLARE_R2_BUCKET}/${key}`;
         console.log("✅ [directUploadController] Upload successful!");

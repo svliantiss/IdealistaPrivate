@@ -1,15 +1,12 @@
 import { useDispatch } from 'react-redux';
 import { useLocation } from "wouter";
 import { Agent, logout } from '../slices/authSlice';
-import { api } from "./baseApi";
+import { api, getAuthHeader } from "./baseApi";
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return { Authorization: token ? `Bearer ${token}` : "" };
-};
+
 
 export const sendOtp = ({ email, name }: { email: string; name: string }) =>
     api.post('/api/auth/request-otp', { email, name }).then(res => res.data);

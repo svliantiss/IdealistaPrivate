@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "gen:prisma-storage": "node scripts/generate-prisma-storage.js",
-    "dev:client": "vite dev --port 5000",
+    "dev:client": "vite dev --port 3000",
     "dev": "nodemon",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",

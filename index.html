@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload File to R2</title>
+</head>
+<body>
+  <h2>Upload File to Cloudflare R2</h2>
+
+  <!-- File input -->
+  <input type="file" id="fileInput" />
+  <br /><br />
+
+  <!-- Upload button -->
+  <button id="uploadBtn">Upload</button>
+
+  <!-- Status -->
+  <p id="status"></p>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusEl = document.getElementById('status');
+
+    // Replace this with your signed URL from your backend
+    const signedUrl = "https://newbucket.520e87f5e933c1cb26d05195611d1f1b.r2.cloudflarestorage.com/1768843093756-screen.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=f6b3057f0d69d999691134238c2b7a1b%2F20260119%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260119T171813Z&X-Amz-Expires=3600&X-Amz-Signature=c1d268c1c14d859d67c4b2cf84718aebce2d58169f818e208b4feeb9a852e706&X-Amz-SignedHeaders=host";
+
+    uploadBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        statusEl.textContent = "Please select a file first!";
+        return;
+      }
+
+      try {
+        statusEl.textContent = "Uploading...";
+        const response = await fetch(signedUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type // MUST match the signed URL
+          },
+          body: file
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`);
+        }
+
+        statusEl.textContent = "Upload successful!";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Upload failed: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

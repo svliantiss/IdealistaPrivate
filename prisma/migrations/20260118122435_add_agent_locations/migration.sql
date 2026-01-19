@@ -3,11 +3,15 @@ CREATE TABLE "agents" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "website" TEXT,
+    "emailVerified" BOOLEAN DEFAULT false,
     "onboardingStep" INTEGER NOT NULL DEFAULT 1,
     "lastLoginAt" TIMESTAMP(3),
+    "locations" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "agency" TEXT,
     "phone" TEXT,
+    "color" TEXT,
+    "logo" TEXT,
     "agency_phone" TEXT,
     "agency_email" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,6 +65,7 @@ CREATE TABLE "email_otps" (
     "id" SERIAL NOT NULL,
     "email" TEXT NOT NULL,
     "code_hash" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "used" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -169,7 +174,7 @@ CREATE TABLE "agent_amenities" (
 CREATE UNIQUE INDEX "agents_email_key" ON "agents"("email");
 
 -- CreateIndex
-CREATE INDEX "email_otps_email_idx" ON "email_otps"("email");
+CREATE INDEX "email_otps_email_type_idx" ON "email_otps"("email", "type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "commissions_booking_id_key" ON "commissions"("booking_id");

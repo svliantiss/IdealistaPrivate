@@ -8,7 +8,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
   try {
     const payload: any = jwt.verify(token, process.env.JWT_SECRET!);
+    console.log({ payload });
     const agent = await prisma.agent.findUnique({ where: { id: payload.agentId } });
+    console.log({ agent });
     if (!agent) return res.status(401).json({ error: "Unauthorized" });
     (req as any).agent = agent;
     next();

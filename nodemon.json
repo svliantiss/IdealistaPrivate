@@ -1,0 +1,6 @@
+{
+  "watch": ["server"],
+  "ext": "ts,json",
+  "ignore": ["node_modules", "dist"],
+  "exec": "env NODE_ENV=development tsx server/index.ts"
+}

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import cors from "cors"; // Import CORS
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes"; // this now registers auth + onboarding
 import { serveStatic } from "./static";
@@ -7,9 +8,22 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import path from "path";
 
+
+
 const app = express();
 const httpServer = createServer(app);
 const MemoryStoreSession = MemoryStore(session);
+
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true, // true allows all origins, or set specific origin(s)
+  credentials: true, // Allow cookies/sessions to be sent
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+app.options('*', cors());
+
 
 // session middleware (your existing setup)
 app.use(session({
@@ -50,6 +64,8 @@ app.use((req, res, next) => {
 
 (async () => {
   // 🔗 Register auth + onboarding routes
+  app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
   await registerRoutes(httpServer, app);
 
   // error handler

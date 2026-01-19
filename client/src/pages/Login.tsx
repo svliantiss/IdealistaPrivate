@@ -10,6 +10,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { ArrowRight, Mail } from "lucide-react";
+import { useRequestLoginOtp, useVerifyLoginOtp } from "@/store/query/auth.queries";
+
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,18 +19,32 @@ export default function Login() {
   const [otp, setOtp] = useState("");
   const [, setLocation] = useLocation();
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const requestOtpMutation = useRequestLoginOtp();
+  const verifyOtpMutation = useVerifyLoginOtp();
+
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+    try {
+      await requestOtpMutation.mutateAsync({ email });
       setShowOtp(true);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send OTP. Try again.");
     }
   };
 
-  const handleOtpSubmit = (value: string) => {
+  const handleOtpSubmit = async (value: string) => {
     setOtp(value);
     if (value.length === 6) {
-      // Mock verification success
-      setLocation("/dashboard");
+      try {
+        await verifyOtpMutation.mutateAsync({ email, otp: value });
+        setLocation("/dashboard");
+      } catch (err) {
+        console.error(err);
+        alert("Invalid OTP. Try again.");
+      }
     }
   };
 
@@ -63,11 +79,11 @@ export default function Login() {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full">
-                Log In
+              <Button type="submit" className="w-full" disabled={requestOtpMutation.isPending}>
+                {requestOtpMutation.isPending ? "Sending..." : "Log In"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -79,9 +95,9 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                variant="outline"
+                className="w-full"
                 type="button"
                 onClick={() => setLocation("/onboarding")}
               >

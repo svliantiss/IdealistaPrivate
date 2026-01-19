@@ -16,12 +16,13 @@ export const step3Branding = async (req: Request, res: Response) => {
 
 export const step4Contact = async (req: Request, res: Response) => {
     const agent = (req as any).agent;
-    const { agencyPhone, location } = req.body;
-    if (!agencyPhone || !location?.length) return res.status(400).json({ error: "Missing fields" });
+    const { agencyPhone, locations } = req.body;
+    console.log({ agencyPhone, locations });
+    if (!agencyPhone || !locations?.length) return res.status(400).json({ error: "Missing fields" });
 
     const updated = await prisma.agent.update({
         where: { id: agent.id },
-        data: { agencyPhone, location, onboardingStep: 4 },
+        data: { agencyPhone, locations, onboardingStep: 4 },
     });
 
     res.json({ agent: updated });

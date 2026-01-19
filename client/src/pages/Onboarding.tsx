@@ -8,20 +8,23 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  Building2, 
-  User, 
-  Mail, 
-  MapPin, 
-  Globe, 
-  Phone 
+import {
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Building2,
+  User,
+  Mail,
+  MapPin,
+  Globe,
+  Phone
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
+import { useSendOtp, useVerifyOtp, useUpdateBranding, useUpdateContact } from "@/store/query/onboarding.queries";
+import { Agent } from "@/store/slices/authSlice";
+import { uploadToR2 } from "@/lib/utils";
 
 interface OnboardingData {
   adminName: string;
@@ -44,7 +47,7 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
   const [locationInput, setLocationInput] = useState("");
-  
+
   const [formData, setFormData] = useState<OnboardingData>({
     adminName: "",
     adminEmail: "",
@@ -71,14 +74,28 @@ export default function Onboarding() {
     setStep(prev => Math.max(prev - 1, 1));
   };
 
+
+
+  // --- TanStack Query Mutations ---
+  const sendOtpMutation = useSendOtp();
+  const verifyOtpMutation = useVerifyOtp();
+  const updateBrandingMutation = useUpdateBranding();
+  const updateContactMutation = useUpdateContact();
+
+
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await sendOtpMutation.mutateAsync({ email: formData.adminEmail, name: formData.adminName });
+      toast.success(`Verification code sent to ${formData.adminEmail}`);
+      nextStep();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send OTP");
+    }
     setLoading(false);
-    toast.success(`Verification code sent to ${formData.adminEmail}`);
-    nextStep();
   };
 
   const handleStep2Submit = async (e: React.FormEvent) => {
@@ -89,19 +106,41 @@ export default function Onboarding() {
     }
     setLoading(true);
     // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      await verifyOtpMutation.mutateAsync({ email: formData.adminEmail, otp: formData.otp });
+      toast.success("Email verified successfully");
+      nextStep();
+    } catch (err) {
+      console.error(err);
+      toast.error("Invalid OTP");
+    }
     setLoading(false);
-    toast.success("Email verified successfully");
-    nextStep();
   };
 
-  const handleStep3Submit = (e: React.FormEvent) => {
+  const handleStep3Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agencyName) {
       toast.error("Please enter your agency name");
       return;
     }
-    nextStep();
+    setLoading(true);
+
+    try {
+      // 1️⃣ Upload logo if user selected a file
+      let logoUrl: string | undefined = undefined;
+      if (formData.agencyLogo) {
+        logoUrl = await uploadToR2(formData.agencyLogo);
+      }
+
+      await updateBrandingMutation.mutateAsync({
+        agencyName: formData.agencyName, agencyColor: formData.agencyColor, agencyLogo: logoUrl, // include in case backend wants logo
+      });
+      nextStep();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update branding");
+    }
+    setLoading(false);
   };
 
   const handleStep4Submit = async (e: React.FormEvent) => {
@@ -122,28 +161,27 @@ export default function Onboarding() {
       toast.error("You must accept the privacy policy");
       return;
     }
-
     setLoading(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      console.log("Submitting contact info:", { formData });
+      await updateContactMutation.mutateAsync({ agencyPhone: formData.agencyPhone, locations: formData.locations });
+
+      toast.success("Agency account created successfully!");
+      setLocation("/dashboard");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create agency account");
+    }
     setLoading(false);
-    toast.success("Agency account created successfully!");
-    setLocation("/dashboard");
+
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Logo must be less than 2MB");
-        return;
-      }
-      if (!file.type.startsWith('image/')) {
-        toast.error("Please upload an image file");
-        return;
-      }
-      updateData("agencyLogo", file);
-    }
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return toast.error("Logo must be <2MB");
+    if (!file.type.startsWith("image/")) return toast.error("Please upload an image file");
+    updateData("agencyLogo", file);
   };
 
   const addLocation = () => {
@@ -167,7 +205,7 @@ export default function Onboarding() {
             <img src={logoImg} alt="RentNetAgents" className="h-10 w-10 rounded-md" />
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm font-medium text-muted-foreground">
             <span>Step {step} of {TOTAL_STEPS}</span>
@@ -189,9 +227,9 @@ export default function Onboarding() {
                 <Label htmlFor="adminName">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="adminName" 
-                    placeholder="John Doe" 
+                  <Input
+                    id="adminName"
+                    placeholder="John Doe"
                     className="pl-9"
                     value={formData.adminName}
                     onChange={(e) => updateData("adminName", e.target.value)}
@@ -203,10 +241,10 @@ export default function Onboarding() {
                 <Label htmlFor="adminEmail">Work Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="adminEmail" 
-                    type="email" 
-                    placeholder="john@agency.com" 
+                  <Input
+                    id="adminEmail"
+                    type="email"
+                    placeholder="john@agency.com"
                     className="pl-9"
                     value={formData.adminEmail}
                     onChange={(e) => updateData("adminEmail", e.target.value)}
@@ -236,9 +274,9 @@ export default function Onboarding() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 flex flex-col items-center">
-              <InputOTP 
-                maxLength={6} 
-                value={formData.otp} 
+              <InputOTP
+                maxLength={6}
+                value={formData.otp}
                 onChange={(val) => updateData("otp", val)}
               >
                 <InputOTPGroup>
@@ -276,9 +314,9 @@ export default function Onboarding() {
                 <Label htmlFor="agencyName">Agency Name</Label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="agencyName" 
-                    placeholder="Luxury Estates" 
+                  <Input
+                    id="agencyName"
+                    placeholder="Luxury Estates"
                     className="pl-9"
                     value={formData.agencyName}
                     onChange={(e) => updateData("agencyName", e.target.value)}
@@ -286,16 +324,16 @@ export default function Onboarding() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="agencyLogo">Agency Logo (Optional)</Label>
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
                     <div className="h-20 w-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/50 overflow-hidden">
                       {formData.agencyLogo ? (
-                        <img 
-                          src={URL.createObjectURL(formData.agencyLogo)} 
-                          alt="Logo preview" 
+                        <img
+                          src={URL.createObjectURL(formData.agencyLogo)}
+                          alt="Logo preview"
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -304,8 +342,8 @@ export default function Onboarding() {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <Input 
-                      id="agencyLogo" 
+                    <Input
+                      id="agencyLogo"
                       type="file"
                       accept="image/*"
                       onChange={handleLogoUpload}
@@ -320,14 +358,14 @@ export default function Onboarding() {
                 <Label htmlFor="agencyColor">Brand Color</Label>
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
-                    <div 
+                    <div
                       className="h-20 w-20 rounded-lg border-2 border-border"
                       style={{ backgroundColor: formData.agencyColor }}
                     />
                   </div>
                   <div className="flex-1">
-                    <Input 
-                      id="agencyColor" 
+                    <Input
+                      id="agencyColor"
                       type="color"
                       value={formData.agencyColor}
                       onChange={(e) => updateData("agencyColor", e.target.value)}
@@ -344,9 +382,11 @@ export default function Onboarding() {
               <Button variant="ghost" type="button" onClick={prevStep}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-              <Button type="submit">
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button disabled={loading} type="submit">
+                {loading ? "Updating..." : <>
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>}
               </Button>
             </CardFooter>
           </form>
@@ -363,23 +403,23 @@ export default function Onboarding() {
                 <Label htmlFor="agencyWebsite">Website (Optional)</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="agencyWebsite" 
-                    placeholder="www.luxuryestates.com" 
+                  <Input
+                    id="agencyWebsite"
+                    placeholder="www.luxuryestates.com"
                     className="pl-9"
                     value={formData.agencyWebsite}
                     onChange={(e) => updateData("agencyWebsite", e.target.value)}
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="agencyPhone">Office Phone</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="agencyPhone" 
-                    placeholder="+34 123 456 789" 
+                  <Input
+                    id="agencyPhone"
+                    placeholder="+34 123 456 789"
                     className="pl-9"
                     value={formData.agencyPhone}
                     onChange={(e) => updateData("agencyPhone", e.target.value)}
@@ -393,8 +433,8 @@ export default function Onboarding() {
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="e.g. Marbella, Malaga" 
+                    <Input
+                      placeholder="e.g. Marbella, Malaga"
                       className="pl-9"
                       value={locationInput}
                       onChange={(e) => setLocationInput(e.target.value)}
@@ -412,8 +452,8 @@ export default function Onboarding() {
                   {formData.locations.map(loc => (
                     <Badge key={loc} variant="secondary" className="px-3 py-1 text-sm">
                       {loc}
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeLocation(loc)}
                         className="ml-2 hover:text-destructive"
                       >
@@ -429,8 +469,8 @@ export default function Onboarding() {
 
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-start space-x-2">
-                  <Checkbox 
-                    id="terms" 
+                  <Checkbox
+                    id="terms"
                     checked={formData.acceptsTerms}
                     onCheckedChange={(checked) => updateData("acceptsTerms", checked === true)}
                   />
@@ -448,8 +488,8 @@ export default function Onboarding() {
                 </div>
 
                 <div className="flex items-start space-x-2">
-                  <Checkbox 
-                    id="privacy" 
+                  <Checkbox
+                    id="privacy"
                     checked={formData.acceptsPrivacy}
                     onCheckedChange={(checked) => updateData("acceptsPrivacy", checked === true)}
                   />

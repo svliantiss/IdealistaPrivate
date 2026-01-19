@@ -1,7 +1,8 @@
 import { Switch, Route } from "wouter";
+import { Toaster } from "sonner";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
+// import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
@@ -26,45 +27,68 @@ import PropertyDetails from "@/pages/PropertyDetails";
 import EditProperty from "@/pages/EditProperty";
 import Onboarding from "@/pages/Onboarding";
 import AccountSettings from "@/pages/AccountSettings";
+import { Provider } from 'react-redux';
+import { store } from '@/store';
+import { AppProviders } from "./store/providers";
+import { GlobalLoader } from "./components/ui/GlobalLoader";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
+import { useAuthQuery } from "./store/api/onboarding.api";
+
+
 
 function Router() {
+  useAuthQuery();
+
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/login" component={Login} />
-      <Route path="/onboarding" component={Onboarding} />
-      <Route path="/account" component={AccountSettings} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/search" component={Search} />
-      <Route path="/rentals/:id" component={PropertyDetails} />
-      <Route path="/properties" component={Properties} />
-      <Route path="/properties/:id/edit" component={EditProperty} />
-      <Route path="/bookings" component={Bookings} />
-      <Route path="/sales" component={Sales} />
-      <Route path="/active-listings" component={ActiveListings} />
-      <Route path="/pending-bookings" component={PendingBookings} />
-      <Route path="/total-bookings" component={TotalBookings} />
-      <Route path="/commissions" component={CommissionsPage} />
-      <Route path="/sold-houses" component={SoldHouses} />
-      <Route path="/rental-commissions" component={RentalCommissions} />
-      <Route path="/sales-commissions" component={SalesCommissions} />
-      <Route path="/employee-stats" component={EmployeeStats} />
-      <Route path="/employee-stats/:agentId" component={EmployeeDetail} />
-      <Route path="/admin" component={Admin} />
+      {/* Public */}
+      <PublicOnlyRoute path="/login" component={Login} />
+      <PublicOnlyRoute path="/onboarding" component={Onboarding} />
+
+      {/* Protected */}
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/account" component={AccountSettings} />
+      <ProtectedRoute path="/search" component={Search} />
+      <ProtectedRoute path="/properties" component={Properties} />
+      <ProtectedRoute path="/properties/:id/edit" component={EditProperty} />
+      <ProtectedRoute path="/rentals/:id" component={PropertyDetails} />
+      <ProtectedRoute path="/bookings" component={Bookings} />
+      <ProtectedRoute path="/sales" component={Sales} />
+      <ProtectedRoute path="/active-listings" component={ActiveListings} />
+      <ProtectedRoute path="/pending-bookings" component={PendingBookings} />
+      <ProtectedRoute path="/total-bookings" component={TotalBookings} />
+      <ProtectedRoute path="/commissions" component={CommissionsPage} />
+      <ProtectedRoute path="/sold-houses" component={SoldHouses} />
+      <ProtectedRoute path="/rental-commissions" component={RentalCommissions} />
+      <ProtectedRoute path="/sales-commissions" component={SalesCommissions} />
+      <ProtectedRoute path="/employee-stats" component={EmployeeStats} />
+      <ProtectedRoute path="/employee-stats/:agentId" component={EmployeeDetail} />
+      <ProtectedRoute path="/" component={Onboarding} />
+
+      {/* Admin (separate auth later if needed) */}
       <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin" component={Admin} />
+
       <Route component={NotFound} />
+      <Toaster />
+
     </Switch>
   );
 }
 
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppProviders >
+      <QueryClientProvider client={queryClient}>
+        <GlobalLoader />
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppProviders>
   );
 }
 

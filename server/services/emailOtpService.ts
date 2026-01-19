@@ -1,45 +1,44 @@
-import { prisma } from "./../db";
-import bcrypt from "bcrypt";
-import Resend from "resend";
+import { prisma } from "../db";
+import { OTP_TYPES, OtpType } from "../types/otp";
+import { hashCode, compareHash } from "../utils/hash"; // your hash functions
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
-// Send OTP email via Resend
-export const sendOtpEmail = async (email: string, otp: string) => {
+export const createAndSendOtp = async (email: string, type: OtpType = OTP_TYPES.REGISTRATION) => {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeHash = await hashCode(code);
+
+  await prisma.emailOtp.create({
+    data: {
+      email,
+      codeHash,
+      type,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 min expiry
+    },
+  });
+
   await resend.emails.send({
-    from: "Idealista <no-reply@idealista.com>",
+    from: "info@optimize4ai.com",
     to: email,
     subject: "Your OTP Code",
-    html: `<p>Your verification code is <strong>${otp}</strong></p>`,
+    html: `<p>Your OTP for ${type} is <strong>${code}</strong></p>`,
   });
+
+  return code;
 };
 
-// Generate, store, and send OTP
-export const createAndSendOtp = async (email: string) => {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const codeHash = await bcrypt.hash(otp, 10);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  await prisma.emailOtp.create({ data: { email, codeHash, expiresAt } });
-  await sendOtpEmail(email, otp);
-
-  return otp; // optional, for testing
-};
-
-// Verify OTP
-export const verifyOtp = async (email: string, otp: string) => {
-  const record = await prisma.emailOtp.findFirst({
-    where: { email },
+export const verifyOtp = async (email: string, input: string, type: OtpType) => {
+  const otp = await prisma.emailOtp.findFirst({
+    where: { email, type, used: false },
     orderBy: { createdAt: "desc" },
   });
 
-  if (!record) return false;
-  if (record.expiresAt < new Date()) return false;
+  if (!otp) return false;
 
-  const valid = await bcrypt.compare(otp, record.codeHash);
-  if (!valid) return false;
+  const isValid = await compareHash(input, otp.codeHash);
+  if (!isValid || otp.expiresAt < new Date()) return false;
 
-  // Delete used OTP
-  await prisma.emailOtp.delete({ where: { id: record.id } });
+  await prisma.emailOtp.update({ where: { id: otp.id }, data: { used: true } });
   return true;
 };

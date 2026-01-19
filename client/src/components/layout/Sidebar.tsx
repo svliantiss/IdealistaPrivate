@@ -1,21 +1,30 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Search, 
-  Building2, 
-  CalendarDays, 
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  LayoutDashboard,
+  Search,
+  Building2,
+  CalendarDays,
   Home,
   Users,
   LogOut,
   ChevronDown,
   ChevronRight
 } from "lucide-react";
+
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
+import { logout } from "@/store/slices/authSlice";
 
 export function Sidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const dispatch = useDispatch();
+  const handleLogout = () => {
+    dispatch(logout());    
+    navigate("/login");
+  };
+
   const [propertiesExpanded, setPropertiesExpanded] = useState(
     location === "/properties" || location === "/sales"
   );
@@ -88,7 +97,7 @@ export function Sidebar() {
               <ChevronRight className="h-4 w-4" />
             )}
           </div>
-          
+
           {propertiesExpanded && (
             <div className="ml-4 mt-1 space-y-1">
               {propertiesSubItems.map((item) => {
@@ -146,7 +155,7 @@ export function Sidebar() {
             </div>
           </div>
         </Link>
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/60 hover:text-destructive transition-colors">
+        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/60 hover:text-destructive transition-colors" onClick={handleLogout}>
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>

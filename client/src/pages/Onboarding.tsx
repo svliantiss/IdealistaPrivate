@@ -25,6 +25,8 @@ import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png"
 import { useSendOtp, useVerifyOtp, useUpdateBranding, useUpdateContact } from "@/store/query/onboarding.queries";
 import { Agent } from "@/store/slices/authSlice";
 import { uploadToR2 } from "@/lib/utils";
+import { useProfile, useUpdateProfile } from "@/store/api/profileApi";
+
 
 interface OnboardingData {
   adminName: string;
@@ -43,6 +45,8 @@ interface OnboardingData {
 const TOTAL_STEPS = 4;
 
 export default function Onboarding() {
+  const updateProfile = useUpdateProfile();
+  const { data: profile } = useProfile();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
@@ -126,18 +130,26 @@ export default function Onboarding() {
     setLoading(true);
 
     try {
+      console.log("🎨 [Step3] Starting branding update...");
       // 1️⃣ Upload logo if user selected a file
       let logoUrl: string | undefined = undefined;
       if (formData.agencyLogo) {
-        logoUrl = await uploadToR2(formData.agencyLogo);
+        console.log("📸 [Step3] Logo file detected, starting upload...");
+        logoUrl = await uploadToR2(formData.agencyLogo)        
+        updateProfile.mutate({ logo: logoUrl });
+        console.log("✅ [Step3] Logo uploaded successfully:", logoUrl);
+      } else {
+        console.log("ℹ️ [Step3] No logo file selected, skipping upload");
       }
 
+      console.log("💾 [Step3] Updating branding via mutation...");
       await updateBrandingMutation.mutateAsync({
         agencyName: formData.agencyName, agencyColor: formData.agencyColor, agencyLogo: logoUrl, // include in case backend wants logo
       });
+      console.log("✅ [Step3] Branding updated successfully");
       nextStep();
     } catch (err) {
-      console.error(err);
+      console.error("❌ [Step3] Error during step 3 submission:", err);
       toast.error("Failed to update branding");
     }
     setLoading(false);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+; import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,13 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { 
-  Building2, 
-  User, 
-  Mail, 
-  Phone, 
-  Globe, 
-  MapPin, 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { uploadToR2 } from './../lib/utils';
+import { useDispatch } from 'react-redux';
+const API_BASE = 'http://localhost:3003/api'; // adjust your backend URL
+
+
+
+import {
+  Building2,
+  User,
+  Mail,
+  Phone,
+  Globe,
+  MapPin,
   Palette,
   Upload,
   Bell,
@@ -23,49 +30,70 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import { useProfile, useUpdateProfile } from "@/store/api/profileApi";
 
 export default function AccountSettings() {
   const [activeTab, setActiveTab] = useState("agency");
   const [locationInput, setLocationInput] = useState("");
-  
+
+
+  // --- Fetch profile with TanStack Query ---
+  const updateProfile = useUpdateProfile();
+  const { data: profile, isLoading } = useProfile();
+
   // Agency data
   const [agencyData, setAgencyData] = useState({
-    name: "Velmont Properties",
+    name: profile?.name || "",
     logo: null as File | null,
-    color: "#0f172a",
-    website: "www.velmontproperties.com",
-    phone: "+34 952 123 456",
-    locations: ["Marbella", "Malaga", "Estepona"]
+    color: profile?.color || "#0f172a",
+    website: profile?.website || "",
+    phone: profile?.agencyPhone || "",
+    locations: profile?.locations || [],
+    logoUrl: profile?.logo || "",
   });
 
-  // User data
   const [userData, setUserData] = useState({
-    name: "Ryan",
-    email: "ryan@velmontproperties.com",
-    phone: "+34 612 345 678",
-    role: "Agency Owner"
+    name: profile?.name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    role: "Agency Owner",
   });
 
-  // Settings
   const [settings, setSettings] = useState({
     emailNotifications: true,
     bookingAlerts: true,
     marketingEmails: false,
     twoFactorAuth: false,
-    publicProfile: true
+    publicProfile: true,
   });
 
-  const updateAgencyData = (key: string, value: any) => {
-    setAgencyData(prev => ({ ...prev, [key]: value }));
-  };
+  useEffect(() => {
+    if (!profile) return;
 
-  const updateUserData = (key: string, value: any) => {
-    setUserData(prev => ({ ...prev, [key]: value }));
-  };
+    setAgencyData({
+      name: profile.name ?? "",
+      logo: null,
+      color: profile.color ?? "#0f172a",
+      website: profile.website ?? "",
+      phone: profile.agencyPhone ?? "",
+      locations: profile.locations ?? [],
+      logoUrl: profile.logo ?? "",
+    });
 
-  const updateSettings = (key: string, value: boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
+    setUserData({
+      name: profile.name ?? "",
+      email: profile.email ?? "",
+      phone: profile.phone ?? "",
+      role: "Agency Owner",
+    });
+  }, [profile]);
+
+  const updateAgencyData = (key: string, value: any) =>
+    setAgencyData((prev) => ({ ...prev, [key]: value }));
+  const updateUserData = (key: string, value: any) =>
+    setUserData((prev) => ({ ...prev, [key]: value }));
+  const updateSettings = (key: string, value: boolean) =>
+    setSettings((prev) => ({ ...prev, [key]: value }));
 
   const addLocation = () => {
     if (locationInput.trim() && !agencyData.locations.includes(locationInput.trim())) {
@@ -75,36 +103,43 @@ export default function AccountSettings() {
   };
 
   const removeLocation = (loc: string) => {
-    updateAgencyData("locations", agencyData.locations.filter(l => l !== loc));
+    updateAgencyData("locations", agencyData.locations.filter((l: string) => l !== loc));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Logo must be less than 2MB");
-        return;
-      }
-      if (!file.type.startsWith('image/')) {
-        toast.error("Please upload an image file");
-        return;
-      }
-      updateAgencyData("logo", file);
-      toast.success("Logo updated successfully");
-    }
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) return toast.error("Logo must be less than 2MB");
+    if (!file.type.startsWith("image/")) return toast.error("Please upload an image file");
+
+    updateAgencyData("logo", file);
   };
 
   const handleSaveAgency = () => {
-    toast.success("Agency information updated successfully");
+    updateProfile.mutate({
+      agency: agencyData.name,
+      color: agencyData.color,
+      website: agencyData.website,
+      agencyPhone: agencyData.phone,
+      locations: agencyData.locations,
+      logoFile: agencyData.logo,
+    });
   };
 
   const handleSaveUser = () => {
-    toast.success("User information updated successfully");
+    updateProfile.mutate({
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone,
+    });
   };
 
   const handleSaveSettings = () => {
-    toast.success("Settings saved successfully");
+    toast.success("Settings saved successfully"); // You can integrate settings API if needed
   };
+
+
 
   return (
     <Layout>
@@ -133,9 +168,9 @@ export default function AccountSettings() {
                   <Label htmlFor="agencyName">Agency Name</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="agencyName" 
-                      placeholder="Agency Name" 
+                    <Input
+                      id="agencyName"
+                      placeholder="Agency Name"
                       className="pl-9"
                       value={agencyData.name}
                       onChange={(e) => updateAgencyData("name", e.target.value)}
@@ -148,10 +183,10 @@ export default function AccountSettings() {
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0">
                       <div className="h-20 w-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/50 overflow-hidden">
-                        {agencyData.logo ? (
-                          <img 
-                            src={URL.createObjectURL(agencyData.logo)} 
-                            alt="Logo preview" 
+                        {(agencyData.logo || agencyData.logoUrl )? (
+                          <img
+                            src={agencyData.logo ? URL.createObjectURL(agencyData.logo) : agencyData.logoUrl}
+                            alt="Logo preview"
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -160,8 +195,8 @@ export default function AccountSettings() {
                       </div>
                     </div>
                     <div className="flex-1">
-                      <Input 
-                        id="agencyLogo" 
+                      <Input
+                        id="agencyLogo"
                         type="file"
                         accept="image/*"
                         onChange={handleLogoUpload}
@@ -176,15 +211,15 @@ export default function AccountSettings() {
                   <Label htmlFor="agencyColor">Brand Color</Label>
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0">
-                      <div 
+                      <div
                         className="h-12 w-12 rounded-lg border-2 border-border"
                         style={{ backgroundColor: agencyData.color }}
                       />
                     </div>
                     <div className="flex-1 flex gap-2 items-center">
                       <Palette className="h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="agencyColor" 
+                      <Input
+                        id="agencyColor"
                         type="color"
                         value={agencyData.color}
                         onChange={(e) => updateAgencyData("color", e.target.value)}
@@ -199,9 +234,9 @@ export default function AccountSettings() {
                   <Label htmlFor="agencyWebsite">Website</Label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="agencyWebsite" 
-                      placeholder="www.agency.com" 
+                    <Input
+                      id="agencyWebsite"
+                      placeholder="www.agency.com"
                       className="pl-9"
                       value={agencyData.website}
                       onChange={(e) => updateAgencyData("website", e.target.value)}
@@ -213,9 +248,9 @@ export default function AccountSettings() {
                   <Label htmlFor="agencyPhone">Office Phone</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="agencyPhone" 
-                      placeholder="+34 123 456 789" 
+                    <Input
+                      id="agencyPhone"
+                      placeholder="+34 123 456 789"
                       className="pl-9"
                       value={agencyData.phone}
                       onChange={(e) => updateAgencyData("phone", e.target.value)}
@@ -228,8 +263,8 @@ export default function AccountSettings() {
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="Add a city" 
+                      <Input
+                        placeholder="Add a city"
                         className="pl-9"
                         value={locationInput}
                         onChange={(e) => setLocationInput(e.target.value)}
@@ -244,11 +279,11 @@ export default function AccountSettings() {
                     <Button type="button" variant="outline" onClick={addLocation}>Add</Button>
                   </div>
                   <div className="flex flex-wrap gap-2 min-h-[40px]">
-                    {agencyData.locations.map(loc => (
+                    {agencyData.locations.map((loc: string) => (
                       <Badge key={loc} variant="secondary" className="px-3 py-1 text-sm">
                         {loc}
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={() => removeLocation(loc)}
                           className="ml-2 hover:text-destructive"
                         >
@@ -280,9 +315,9 @@ export default function AccountSettings() {
                   <Label htmlFor="userName">Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="userName" 
-                      placeholder="Your name" 
+                    <Input
+                      id="userName"
+                      placeholder="Your name"
                       className="pl-9"
                       value={userData.name}
                       onChange={(e) => updateUserData("name", e.target.value)}
@@ -294,10 +329,10 @@ export default function AccountSettings() {
                   <Label htmlFor="userEmail">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="userEmail" 
+                    <Input
+                      id="userEmail"
                       type="email"
-                      placeholder="email@example.com" 
+                      placeholder="email@example.com"
                       className="pl-9"
                       value={userData.email}
                       onChange={(e) => updateUserData("email", e.target.value)}
@@ -309,9 +344,9 @@ export default function AccountSettings() {
                   <Label htmlFor="userPhone">Phone Number</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="userPhone" 
-                      placeholder="+34 612 345 678" 
+                    <Input
+                      id="userPhone"
+                      placeholder="+34 612 345 678"
                       className="pl-9"
                       value={userData.phone}
                       onChange={(e) => updateUserData("phone", e.target.value)}
@@ -321,9 +356,9 @@ export default function AccountSettings() {
 
                 <div className="space-y-2">
                   <Label htmlFor="userRole">Role</Label>
-                  <Input 
-                    id="userRole" 
-                    placeholder="Your role" 
+                  <Input
+                    id="userRole"
+                    placeholder="Your role"
                     value={userData.role}
                     disabled
                     className="bg-muted"
@@ -349,10 +384,10 @@ export default function AccountSettings() {
                   <Label htmlFor="currentPassword">Current Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="currentPassword" 
+                    <Input
+                      id="currentPassword"
                       type="password"
-                      placeholder="Enter current password" 
+                      placeholder="Enter current password"
                       className="pl-9"
                     />
                   </div>
@@ -362,10 +397,10 @@ export default function AccountSettings() {
                   <Label htmlFor="newPassword">New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="newPassword" 
+                    <Input
+                      id="newPassword"
                       type="password"
-                      placeholder="Enter new password" 
+                      placeholder="Enter new password"
                       className="pl-9"
                     />
                   </div>
@@ -375,10 +410,10 @@ export default function AccountSettings() {
                   <Label htmlFor="confirmPassword">Confirm New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="confirmPassword" 
+                    <Input
+                      id="confirmPassword"
                       type="password"
-                      placeholder="Confirm new password" 
+                      placeholder="Confirm new password"
                       className="pl-9"
                     />
                   </div>
@@ -409,7 +444,7 @@ export default function AccountSettings() {
                       Receive email notifications about important updates
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="emailNotifications"
                     checked={settings.emailNotifications}
                     onCheckedChange={(checked) => updateSettings("emailNotifications", checked)}
@@ -426,7 +461,7 @@ export default function AccountSettings() {
                       Get notified about new bookings and requests
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="bookingAlerts"
                     checked={settings.bookingAlerts}
                     onCheckedChange={(checked) => updateSettings("bookingAlerts", checked)}
@@ -443,7 +478,7 @@ export default function AccountSettings() {
                       Receive emails about new features and updates
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="marketingEmails"
                     checked={settings.marketingEmails}
                     onCheckedChange={(checked) => updateSettings("marketingEmails", checked)}
@@ -468,7 +503,7 @@ export default function AccountSettings() {
                       Add an extra layer of security to your account
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="twoFactorAuth"
                     checked={settings.twoFactorAuth}
                     onCheckedChange={(checked) => updateSettings("twoFactorAuth", checked)}
@@ -485,7 +520,7 @@ export default function AccountSettings() {
                       Make your agency profile visible to other agents
                     </p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="publicProfile"
                     checked={settings.publicProfile}
                     onCheckedChange={(checked) => updateSettings("publicProfile", checked)}

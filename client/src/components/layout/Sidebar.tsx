@@ -1,6 +1,8 @@
+import { useProfile, useUpdateProfile } from './../../store/api/profileApi';
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+
 import { useSelector, useDispatch } from 'react-redux';
 import {
   LayoutDashboard,
@@ -20,8 +22,10 @@ import { logout } from "@/store/slices/authSlice";
 export function Sidebar() {
   const [location, navigate] = useLocation();
   const dispatch = useDispatch();
+  const { data: profile } = useProfile();
+
   const handleLogout = () => {
-    dispatch(logout());    
+    dispatch(logout());
     navigate("/login");
   };
 
@@ -49,7 +53,18 @@ export function Sidebar() {
   return (
     <div className="h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border fixed left-0 top-0 z-20">
       <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
-        <img src={logoImg} alt="RentNetAgents" className="h-8 w-8 rounded-md" />
+        {profile?.logo ? (
+          <img
+            src={profile.logo}
+            className="h-8 w-8 rounded-full object-cover"
+            alt="Agency Logo"
+          />
+        ) : (
+          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center font-bold">
+            {profile?.agency?.[0] || 'A'}
+          </div>
+        )}
+
         <span className="font-serif font-bold text-xl tracking-tight text-sidebar-primary-foreground">
           RentNetAgents
         </span>
@@ -147,11 +162,16 @@ export function Sidebar() {
         <Link href="/account">
           <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
             <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
-              RV
+              {`${profile?.name?.split(' ')[0][0]}${profile?.name?.split(' ')[1][0]}`|| 'A'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">Ryan</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">Velmont Properties</p>
+              <p className="text-sm font-medium truncate">
+                {profile?.name?.split(' ')[0] || '—'}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {profile?.name || '—'}
+              </p>
+
             </div>
           </div>
         </Link>

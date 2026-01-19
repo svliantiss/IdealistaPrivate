@@ -40,29 +40,41 @@ export function cn(...inputs: ClassValue[]) {
 
 
 export async function uploadToR2(file: File) {
-  // 1. Ask backend for signed URL
-  const { signedUrl, publicUrl } = await fetch("http://localhost:3003/api/upload-url", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fileName: file.name,
-      fileType: file.type,
-    }),
-  }).then(res => res.json());
-
-  // 2. Upload directly to R2
-  const response = await fetch(signedUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": file.type, // MUST MATCH
-    },
-    body: file,
+  console.log("🚀 [uploadToR2] Starting upload process...");
+  console.log("📁 File details:", {
+    name: file.name,
+    type: file.type,
+    size: file.size,
   });
 
-  if (!response.ok) {
-    throw new Error("Upload failed");
-  }
+  // Upload through backend (avoids CORS issues)
+  console.log("📤 [uploadToR2] Uploading via backend...");
+  
+  const formData = new FormData();
+  formData.append("file", file);
 
-  // 3. Use public URL
-  return publicUrl;
+  try {
+    const response = await fetch("http://localhost:3003/api/upload", {
+      method: "POST",
+      body: formData,
+      // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+    });
+
+    console.log("📡 [uploadToR2] Backend response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ [uploadToR2] Upload failed. Response:", errorText);
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+    }
+
+    const { publicUrl } = await response.json();
+    console.log("✅ [uploadToR2] Upload successful!");
+    console.log("🔗 [uploadToR2] Public URL:", publicUrl);
+
+    return publicUrl;
+  } catch (error) {
+    console.error("❌ [uploadToR2] Error during upload:", error);
+    throw error;
+  }
 }

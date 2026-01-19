@@ -30,24 +30,33 @@ const s3 = new S3({
 });
 export const storageController = async (req: express.Request, res: express.Response) => {
     try {
+        console.log("🔐 [storageController] Received upload URL request");
         const { fileName, fileType } = req.body;
+        console.log("📝 [storageController] Request details:", { fileName, fileType });
 
         const key = `${Date.now()}-${fileName}`;
+        console.log("🔑 [storageController] Generated key:", key);
 
-        // THIS IS THE IMPORTANT PART
-        const signedUrl = await s3.getSignedUrlPromise("putObject", {
+        const params = {
             Bucket: process.env.CLOUDFLARE_R2_BUCKET!,
             Key: key,
             Expires: 3600,
-            ContentType: fileType, // <-- forces content-type signing
-        });
+            ContentType: fileType,
+        };
+        console.log("⚙️ [storageController] S3 params:", params);
+
+        // THIS IS THE IMPORTANT PART
+        const signedUrl = await s3.getSignedUrlPromise("putObject", params);
+        console.log("🔗 [storageController] Generated signed URL:", signedUrl.substring(0, 150) + "...");
 
         // Public URL (AFTER upload)
         const publicUrl = `https://pub-${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.dev/${process.env.CLOUDFLARE_R2_BUCKET}/${key}`;
+        console.log("🌐 [storageController] Public URL:", publicUrl);
 
+        console.log("✅ [storageController] Sending response to client");
         res.json({ signedUrl, publicUrl });
     } catch (err) {
-        console.error(err);
+        console.error("❌ [storageController] Error:", err);
         res.status(500).json({ error: "Failed to generate upload URL" });
     }
 }

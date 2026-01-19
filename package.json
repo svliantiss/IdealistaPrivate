@@ -10,7 +10,8 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "r2:test-upload": "tsx scripts/r2-upload-test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.971.0",

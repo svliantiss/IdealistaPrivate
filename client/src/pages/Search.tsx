@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Search as SearchIcon, MapPin, Calendar, Filter, Heart, Share2, ChevronDown, ChevronUp, X, Building2, Home, Phone, Mail, User } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { PropertyAvailabilityDialog } from "@/components/PropertyAvailabilityDialog";
@@ -37,9 +37,21 @@ interface AmenityFilter {
 }
 
 export default function Search() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("rentals");
+  const [rentalType, setRentalType] = useState<"short-term" | "long-term">("short-term");
   const [searchLocation, setSearchLocation] = useState("");
+
+  // Read type query parameter from URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const typeParam = searchParams.get("type");
+    if (typeParam === "rental") {
+      setActiveTab("rentals");
+    } else if (typeParam === "sale") {
+      setActiveTab("buy");
+    }
+  }, [location]);
   const [propertyType, setPropertyType] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minBeds, setMinBeds] = useState<string>("any");
@@ -414,18 +426,18 @@ export default function Search() {
         <div className="bg-white border-b border-border p-6 shadow-sm z-10 sticky top-0">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-serif font-bold text-primary">Find House</h1>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-              <TabsList>
-                <TabsTrigger value="rentals" className="flex items-center gap-2" data-testid="tab-rentals">
-                  <Building2 className="h-4 w-4" />
-                  Find Rentals
-                </TabsTrigger>
-                <TabsTrigger value="buy" className="flex items-center gap-2" data-testid="tab-buy">
-                  <Home className="h-4 w-4" />
-                  To Buy
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {activeTab === "rentals" && (
+              <Tabs value={rentalType} onValueChange={(value) => setRentalType(value as "short-term" | "long-term")} className="w-auto">
+                <TabsList>
+                  <TabsTrigger value="short-term" className="flex items-center gap-2" data-testid="tab-short-term">
+                    Short-term
+                  </TabsTrigger>
+                  <TabsTrigger value="long-term" className="flex items-center gap-2" data-testid="tab-long-term">
+                    Long-term
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">

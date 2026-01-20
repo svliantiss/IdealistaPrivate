@@ -27,6 +27,7 @@ import PropertyDetails from "@/pages/PropertyDetails";
 import EditProperty from "@/pages/EditProperty";
 import Onboarding from "@/pages/Onboarding";
 import AccountSettings from "@/pages/AccountSettings";
+import FindHouse from "@/pages/FindHouse";
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { AppProviders } from "./store/providers";
@@ -49,6 +50,7 @@ function Router() {
       {/* Protected */}
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/account" component={AccountSettings} />
+      <ProtectedRoute path="/find-house" component={FindHouse} />
       <ProtectedRoute path="/search" component={Search} />
       <ProtectedRoute path="/properties" component={Properties} />
       <ProtectedRoute path="/properties/:id/edit" component={EditProperty} />

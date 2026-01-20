@@ -45,10 +45,11 @@ export function Sidebar() {
 
   const bottomNavItems = [
     { icon: CalendarDays, label: "Bookings", href: "/bookings" },
-    { icon: Search, label: "Find House", href: "/search" },
+    { icon: Search, label: "Find House", href: "/find-house" },
   ];
 
   const isPropertiesActive = location === "/properties" || location === "/sales";
+  const isFindHouseActive = location === "/find-house" || location === "/search";
 
   return (
     <div className="h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border fixed left-0 top-0 z-20">
@@ -139,7 +140,7 @@ export function Sidebar() {
         </div>
 
         {bottomNavItems.map((item) => {
-          const isActive = location === item.href;
+          const isActive = item.href === "/find-house" ? isFindHouseActive : location === item.href;
           return (
             <Link key={item.href} href={item.href}>
               <div
@@ -162,7 +163,12 @@ export function Sidebar() {
         <Link href="/account">
           <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
             <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
-              {`${profile?.name?.split(' ')[0][0]}${profile?.name?.split(' ')[1][0]}`|| 'A'}
+              {(() => {
+                const nameParts = profile?.name?.split(' ').filter(part => part.length > 0) || [];
+                const firstInitial = nameParts[0]?.[0] || '';
+                const secondInitial = nameParts[1]?.[0] || '';
+                return firstInitial && secondInitial ? `${firstInitial}${secondInitial}` : firstInitial || 'A';
+              })()}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium truncate">

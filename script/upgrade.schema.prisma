@@ -50,8 +50,6 @@ model Agency {
 
   createdAt       DateTime @default(now()) @map("created_at")
 
-
-  locations       String[]
   agents          Agent[]
   properties      Property[]
   salesProperties SalesProperty[]
@@ -74,6 +72,7 @@ model Agent {
   emailVerified   Boolean  @default(false)
   onboardingStep  Int      @default(1)
   lastLoginAt     DateTime?
+  locations       String[] @default([])
 
   createdAt       DateTime @default(now()) @map("created_at")
 

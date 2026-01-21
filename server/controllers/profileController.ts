@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../db";
 
-// --- Get agent profile ---
 export const getProfileController = async (req: Request, res: Response) => {
   try {
     const agent = (req as any).agent;
@@ -13,66 +12,91 @@ export const getProfileController = async (req: Request, res: Response) => {
         name: true,
         email: true,
         emailVerified: true,
-        agency: true,
-        color: true,
-        logo: true,
         phone: true,
-        agencyPhone: true,
-        agencyEmail: true,
-        website: true,
-        locations: true,
         onboardingStep: true,
         createdAt: true,
+        role: true,
+
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            primaryColor: true,
+            logo: true,
+            phone: true,
+            email: true,
+            website: true,
+            createdAt: true,
+            locations: true,
+          },
+        },
       },
     });
 
-    if (!profile) return res.status(404).json({ error: "Agent not found" });
+    if (!profile) {
+      return res.status(404).json({ error: "Agent not found" });
+    }
 
     res.json({ agent: profile });
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: error.message || "Server error" });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
-// --- Update agent profile ---
 export const updateProfileController = async (req: Request, res: Response) => {
   try {
     const agent = (req as any).agent;
+
     const {
       name,
-      agency,
-      color,
       phone,
+      locations,
+
+      // agency fields
+      agencyName,
+      color,
+      logo,
       agencyPhone,
       agencyEmail,
       website,
-      locations,
-      logo,
-      logoUrl,
     } = req.body;
 
-
-
-
-    const updated = await prisma.agent.update({
+    // 1️⃣ Update agent personal info
+    const updatedAgent = await prisma.agent.update({
       where: { id: agent.id },
       data: {
         name,
-        agency,
-        color,
         phone,
-        agencyPhone,
-        agencyEmail,
-        website,
-        locations,
-        logo,
       },
     });
 
-    res.json({ agent: updated });
+    // 2️⃣ Update agency info (only if agent belongs to one)
+    if (agent.agencyId) {
+      // OPTIONAL but RECOMMENDED: check admin role
+      if (agent.role !== "ADMIN") {
+        return res.status(403).json({
+          error: "Only agency admins can update agency information",
+        });
+      }
+
+      await prisma.agency.update({
+        where: { id: agent.agencyId },
+        data: {
+          name: agencyName,
+          primaryColor: color,
+          locations,
+          logo,
+          phone: agencyPhone,
+          email: agencyEmail,
+          website,
+        },
+      });
+    }
+
+    res.json({ agent: updatedAgent });
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: error.message || "Server error" });
+    res.status(500).json({ error: "Server error" });
   }
 };

@@ -176,7 +176,7 @@ export default function Onboarding() {
     setLoading(true);
     try {
       console.log("Submitting contact info:", { formData });
-      await updateContactMutation.mutateAsync({ agencyPhone: formData.agencyPhone, locations: formData.locations });
+      await updateContactMutation.mutateAsync({ agencyPhone: formData.agencyPhone, website: formData.agencyWebsite, locations: formData.locations });
 
       toast.success("Agency account created successfully!");
       setLocation("/dashboard");

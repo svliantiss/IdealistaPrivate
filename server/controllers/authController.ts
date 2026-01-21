@@ -9,10 +9,10 @@ import jwt from "jsonwebtoken";
 // --- Registration OTP ---
 export const requestOtp = async (req: Request, res: Response) => {
   try {
-
-
     const { email, name } = req.body;
-    if (!email) return res.status(400).json({ error: "Email required" });
+    if (!email || !name) {
+      return res.status(400).json({ error: "Email and name required" });
+    }
 
     let agent = await prisma.agent.findUnique({ where: { email } });
 
@@ -25,9 +25,19 @@ export const requestOtp = async (req: Request, res: Response) => {
         });
       }
     } else {
-      // Create new agent with onboardingStep 1
+      // Create Agency + Admin Agent
+      const agency = await prisma.agency.create({
+        data: { name: `${name}'s Agency` },
+      });
+
       agent = await prisma.agent.create({
-        data: { email, name, onboardingStep: 1 }, // location required
+        data: {
+          email,
+          name,
+          role: "ADMIN",
+          agencyId: agency.id,
+          onboardingStep: 1,
+        },
       });
     }
 
@@ -43,14 +53,22 @@ export const requestOtp = async (req: Request, res: Response) => {
 
 export const verifyOtpController = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and OTP required" });
+  }
 
   const valid = await verifyOtp(email, otp, OTP_TYPES.REGISTRATION);
-  if (!valid) return res.status(400).json({ error: "Invalid or expired OTP" });
+  if (!valid) {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
 
   const agent = await prisma.agent.update({
     where: { email },
-    data: { emailVerified: true, onboardingStep: 2 },
+    data: {
+      emailVerified: true,
+      onboardingStep: 2,
+    },
+    include: { agency: true },
   });
 
   const token = signToken(agent.id, agent.email);
@@ -73,12 +91,20 @@ export const requestLoginOtp = async (req: Request, res: Response) => {
 
 export const verifyLoginOtpController = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and OTP required" });
+  }
 
   const valid = await verifyOtp(email, otp, OTP_TYPES.LOGIN);
-  if (!valid) return res.status(400).json({ error: "Invalid or expired OTP" });
+  if (!valid) {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
 
-  const agent = await prisma.agent.findUnique({ where: { email } });
+  const agent = await prisma.agent.findUnique({
+    where: { email },
+    include: { agency: true },
+  });
+
   if (!agent) return res.status(404).json({ error: "Agent not found" });
 
   const token = signToken(agent.id, agent.email);

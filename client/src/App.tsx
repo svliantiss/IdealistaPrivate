@@ -38,7 +38,8 @@ import { useAuthQuery } from "./store/api/onboarding.api";
 
 
 function Router() {
-  useAuthQuery();
+  const { isError, isLoading } = useAuthQuery();
+  console.log({ isError, isLoading })
 
   return (
     <Switch>

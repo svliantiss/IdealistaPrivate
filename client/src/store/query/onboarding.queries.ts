@@ -37,9 +37,11 @@ export const useUpdateBranding = () => {
 export const useUpdateContact = () => {
   const agentId = useSelector((state: RootState) => state.auth.agent?.id);
   const dispatch = useDispatch();
-  return useMutation<{ agent: Agent }, Error, { agencyPhone: string; locations: string[] }>({
-    mutationFn: (data: { agencyPhone: string; locations: string[] }) =>
-      updateContact({ agentId: agentId!, ...data }),
+  return useMutation<{ agent: Agent }, Error, { agencyPhone: string; website?: string; locations: string[] }>({
+    mutationFn: (data: { agencyPhone: string; locations: string[], website?: string }) => {
+      console.log({ website: data.website })
+      return updateContact({ agentId: agentId!, ...data })
+    },
     onSuccess: (data) => {
       dispatch(setAgent(data.agent));
       dispatch(updateOnboardingStep(4));

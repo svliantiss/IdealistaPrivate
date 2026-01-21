@@ -35,18 +35,22 @@ export const updateContact = ({
     agentId,
     agencyPhone,
     locations,
+    website,
 }: {
     agentId: number;
     agencyPhone: string;
     locations: string[];
-}) =>
-    api
+    website?: string
+}) => {
+    console.log({ website })
+    return api
         .post(
             '/api/onboarding/step4',
-            { agencyPhone, locations: locations },
+            { agencyPhone, locations: locations, website },
             { headers: getAuthHeader() } // <-- attach Bearer token
         )
         .then(res => res.data as { agent: Agent });
+}
 
 export const requestLoginOtp = (data: { email: string }) =>
     api.post("/api/auth/request-login-otp", data).then(res => res.data);
@@ -64,6 +68,7 @@ export const getMe = async () => {
             Authorization: `Bearer ${token}`,
         },
     });
+    console.log({ data: res })
 
     return res.data;
 };

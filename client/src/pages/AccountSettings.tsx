@@ -38,25 +38,25 @@ export default function AccountSettings() {
 
 
   // --- Fetch profile with TanStack Query ---
-  const updateProfile = useUpdateProfile();
+
   const { data: profile, isLoading } = useProfile();
 
   // Agency data
   const [agencyData, setAgencyData] = useState({
-    name: profile?.name || "",
+    name: profile?.agency?.name || "",
     logo: null as File | null,
-    color: profile?.color || "#0f172a",
+    color: profile?.agency?.primaryColor || "#0f172a",
     website: profile?.website || "",
-    phone: profile?.agencyPhone || "",
-    locations: profile?.locations || [],
-    logoUrl: profile?.logo || "",
+    phone: profile?.agency?.phone || "",
+    locations: profile?.agency?.locations || [],
+    logoUrl: profile?.agency?.logo || "",
   });
 
   const [userData, setUserData] = useState({
     name: profile?.name || "",
     email: profile?.email || "",
     phone: profile?.phone || "",
-    role: "Agency Owner",
+    role: profile?.role || "",
   });
 
   const [settings, setSettings] = useState({
@@ -69,22 +69,22 @@ export default function AccountSettings() {
 
   useEffect(() => {
     if (!profile) return;
-
+    console.log({ "profile in frontend": profile })
     setAgencyData({
-      name: profile.name ?? "",
+      name: profile?.agency?.name ?? "",
       logo: null,
-      color: profile.color ?? "#0f172a",
-      website: profile.website ?? "",
-      phone: profile.agencyPhone ?? "",
-      locations: profile.locations ?? [],
-      logoUrl: profile.logo ?? "",
+      color: profile?.agency?.primaryColor ?? "#0f172a",
+      website: profile?.agency?.website ?? "",
+      phone: profile?.agency?.phone ?? "",
+      locations: profile?.agency?.locations ?? [],
+      logoUrl: profile?.agency?.logo ?? "",
     });
 
     setUserData({
       name: profile.name ?? "",
       email: profile.email ?? "",
       phone: profile.phone ?? "",
-      role: "Agency Owner",
+      role: profile?.role ?? "",
     });
   }, [profile]);
 
@@ -117,6 +117,7 @@ export default function AccountSettings() {
   };
 
   const handleSaveAgency = () => {
+    const updateProfile = useUpdateProfile();
     updateProfile.mutate({
       agency: agencyData.name,
       color: agencyData.color,
@@ -128,6 +129,7 @@ export default function AccountSettings() {
   };
 
   const handleSaveUser = () => {
+    const updateProfile = useUpdateProfile();
     updateProfile.mutate({
       name: userData.name,
       email: userData.email,
@@ -183,7 +185,7 @@ export default function AccountSettings() {
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0">
                       <div className="h-20 w-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted/50 overflow-hidden">
-                        {(agencyData.logo || agencyData.logoUrl )? (
+                        {(agencyData.logo || agencyData.logoUrl) ? (
                           <img
                             src={agencyData.logo ? URL.createObjectURL(agencyData.logo) : agencyData.logoUrl}
                             alt="Logo preview"

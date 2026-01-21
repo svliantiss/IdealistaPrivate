@@ -39,6 +39,7 @@ export const useProfile = () => {
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
         retry: 1,
+
     });
 };
 
@@ -59,9 +60,10 @@ export const useUpdateProfile = () => {
             email?: string;
             phone?: string;
         }) => {
-
+            
             dispatch(setLoading(true));
-
+            
+            console.log("color", payload.color)
             // Upload logo if file is provided
             if (payload.logoFile) {
                 payload.logo = await uploadToR2(payload.logoFile);
@@ -85,7 +87,8 @@ export const useUpdateProfile = () => {
             return res.json();
         },
         onSuccess: (data) => {
-            queryClient.setQueryData(['profile'], data.agent);
+            // queryClient.setQueryData(['profile'], data.agent);
+            // queryClient.invalidateQueries({ queryKey: ["profile"] })
             toast.success('Profile updated successfully');
         },
         onError: (err: any) => {

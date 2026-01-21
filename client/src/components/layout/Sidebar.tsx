@@ -53,20 +53,20 @@ export function Sidebar() {
   return (
     <div className="h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border fixed left-0 top-0 z-20">
       <div className="p-6 flex items-center gap-3 border-b border-sidebar-border">
-        {profile?.logo ? (
+        {profile?.agency?.logo ? (
           <img
-            src={profile.logo}
+            src={profile?.agency?.logo}
             className="h-8 w-8 rounded-full object-cover"
             alt="Agency Logo"
           />
         ) : (
           <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center font-bold">
-            {profile?.agency?.[0] || 'A'}
+            A
           </div>
         )}
 
         <span className="font-serif font-bold text-xl tracking-tight text-sidebar-primary-foreground">
-          {profile?.agency || 'Welcome'}
+          {profile?.agency?.name || 'Welcome'}
         </span>
       </div>
 
@@ -162,7 +162,7 @@ export function Sidebar() {
         <Link href="/account">
           <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
             <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
-              {`${profile?.name?.split(' ')?.[0]?.[0]}${profile?.name?.split(' ')?.[1]?.[0]}`|| 'A'}
+              {`${profile?.name?.split(' ')?.[0]?.[0]}${profile?.name?.split(' ')?.[1]?.[0]}` || 'A'}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium truncate">

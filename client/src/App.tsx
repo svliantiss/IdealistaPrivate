@@ -34,6 +34,8 @@ import { GlobalLoader } from "./components/ui/GlobalLoader";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
 import { useAuthQuery } from "./store/api/onboarding.api";
+import SalesPropertyDetails from "./pages/ViewSalesProperties";
+import EditSalesProperty from "./pages/EditSaleProperty";
 
 
 
@@ -47,12 +49,15 @@ function Router() {
       <PublicOnlyRoute path="/login" component={Login} />
       <PublicOnlyRoute path="/onboarding" component={Onboarding} />
 
+
       {/* Protected */}
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/account" component={AccountSettings} />
       <ProtectedRoute path="/search" component={Search} />
       <ProtectedRoute path="/properties" component={Properties} />
       <ProtectedRoute path="/properties/:id/edit" component={EditProperty} />
+      <ProtectedRoute path="/sales/:id/edit" component={EditSalesProperty} />
+      <ProtectedRoute path="/sales/:id" component={SalesPropertyDetails} />
       <ProtectedRoute path="/rentals/:id" component={PropertyDetails} />
       <ProtectedRoute path="/bookings" component={Bookings} />
       <ProtectedRoute path="/sales" component={Sales} />

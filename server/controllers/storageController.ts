@@ -44,7 +44,7 @@ const s3 = new S3(r2Config);
 // Configure multer for memory storage
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 100 * 1024 * 1024 } // 10MB limit
 });
 
 export const storageController = async (req: express.Request, res: express.Response) => {

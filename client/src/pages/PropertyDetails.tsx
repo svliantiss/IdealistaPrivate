@@ -1,3 +1,4 @@
+// src/pages/PropertyDetails.tsx
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,12 +7,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText } from "lucide-react";
 import { useState, useMemo } from "react";
 import { AgentContactDialog } from "@/components/AgentContactDialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useRentalProperty,
+  usePropertyAvailability,
+  // useCreateBooking
+} from "@/store/query/property.queries";
 
 export default function PropertyDetails() {
   const params = useParams<{ id: string }>();
@@ -25,79 +30,31 @@ export default function PropertyDetails() {
   const [clientPhone, setClientPhone] = useState("");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: property, isLoading } = useQuery<any>({
-    queryKey: [`/api/properties/${propertyId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/properties/${propertyId}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-    enabled: propertyId > 0,
-  });
+  // Use TanStack Query hooks from your API
+  const {
+    data: propertyData,
+    isLoading: propertyLoading,
+    error: propertyError
+  } = useRentalProperty(propertyId);
 
-  const { data: availability = [], refetch: refetchAvailability } = useQuery<any[]>({
-    queryKey: [`/api/property-availability/${propertyId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/property-availability/${propertyId}`);
-      if (!response.ok) return [];
-      return response.json();
-    },
-    enabled: propertyId > 0,
-  });
+  // Extract property from response
+  const property = propertyData?.data || propertyData?.property || propertyData;
 
-  const { data: agent } = useQuery<any>({
-    queryKey: [`/api/agents/${property?.agentId}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/agents/${property?.agentId}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-    enabled: !!property?.agentId,
-  });
+  const {
+    data: availabilityData = [],
+    refetch: refetchAvailability
+  } = usePropertyAvailability(propertyId);
 
-  const createBookingMutation = useMutation({
-    mutationFn: async (bookingData: any) => {
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookingData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create booking');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Booking Created",
-        description: "The booking has been successfully created.",
-      });
-      setBookingDialogOpen(false);
-      setClientName("");
-      setClientEmail("");
-      setClientPhone("");
-      setNotes("");
-      setCheckInDate(null);
-      setCheckOutDate(null);
-      refetchAvailability();
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Extract availability from response
+  const availability = availabilityData?.data || availabilityData?.availability || availabilityData;
+
+  // const createBookingMutation = useCreateBooking();
 
   const bookedDates = useMemo(() => {
     const dates: Date[] = [];
-    availability.forEach((a: any) => {
-      if (a.isAvailable === 0) {
+    (availability || []).forEach((a: any) => {
+      if (a.isAvailable === 0 || a.isAvailable === false) {
         const start = new Date(a.startDate);
         const end = new Date(a.endDate);
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -109,7 +66,7 @@ export default function PropertyDetails() {
   }, [availability]);
 
   const isDateBooked = (date: Date) => {
-    return bookedDates.some(d => 
+    return bookedDates.some(d =>
       d.getFullYear() === date.getFullYear() &&
       d.getMonth() === date.getMonth() &&
       d.getDate() === date.getDate()
@@ -177,7 +134,7 @@ export default function PropertyDetails() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDay = firstDay.getDay();
-    
+
     const days: (Date | null)[] = [];
     for (let i = 0; i < startingDay; i++) {
       days.push(null);
@@ -212,8 +169,8 @@ export default function PropertyDetails() {
 
   const calculateTotal = () => {
     const nights = calculateNights();
-    const pricePerNight = parseFloat(property?.price || 0);
-    return (nights * pricePerNight).toFixed(2);
+    const price = typeof property?.price === 'string' ? parseFloat(property.price) : property?.price || 0;
+    return (nights * price).toFixed(2);
   };
 
   const handleBookNow = () => {
@@ -237,22 +194,9 @@ export default function PropertyDetails() {
       });
       return;
     }
-
-    createBookingMutation.mutate({
-      propertyId,
-      ownerAgentId: property.agentId,
-      bookingAgentId: 1, // Current agent (hardcoded for now)
-      clientName,
-      clientEmail,
-      clientPhone,
-      checkIn: checkInDate?.toISOString(),
-      checkOut: checkOutDate?.toISOString(),
-      totalAmount: calculateTotal(),
-      status: "confirmed",
-    });
   };
 
-  if (isLoading) {
+  if (propertyLoading) {
     return (
       <Layout>
         <div className="p-8">
@@ -262,21 +206,59 @@ export default function PropertyDetails() {
     );
   }
 
-  if (!property) {
+  if (propertyError || !property) {
     return (
       <Layout>
         <div className="p-8">
-          <div className="text-center py-12">Property not found</div>
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2">Property not found</h2>
+            <p className="text-muted-foreground mb-4">The property you're looking for doesn't exist or has been removed.</p>
+            <Link href="/properties">
+              <Button className="bg-primary hover:bg-primary/90">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Properties
+              </Button>
+            </Link>
+          </div>
         </div>
       </Layout>
     );
   }
 
+  // Get property image
+  const getPropertyImage = () => {
+    if (property.media && property.media.length > 0) {
+      return property.media[0].url;
+    }
+    if (property.images && property.images.length > 0) {
+      return property.images[0];
+    }
+    return '/placeholder.jpg';
+  };
+
+  // Format price with period
+  const formatPrice = () => {
+    const price = typeof property.price === 'string' ? parseFloat(property.price) : property.price;
+
+    if (property.priceType) {
+      const priceTypeMap: Record<string, string> = {
+        'night': 'night',
+        'week': 'week',
+        'month': 'month'
+      };
+
+      const period = priceTypeMap[property.priceType] || property.priceType;
+      return `€${price.toLocaleString('es-ES')}/${period}`;
+    }
+
+    return `€${price.toLocaleString('es-ES')}/night`;
+  };
+
   return (
     <Layout>
       <div className="p-8 space-y-6">
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/search">
+          <Link href="/properties">
             <Button variant="ghost" size="icon" className="h-10 w-10" data-testid="button-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -301,8 +283,8 @@ export default function PropertyDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="aspect-[16/9] rounded-lg overflow-hidden">
-              <img 
-                src={property.images?.[0] || '/placeholder.jpg'} 
+              <img
+                src={getPropertyImage()}
                 alt={property.title}
                 className="w-full h-full object-cover"
                 data-testid="img-property-main"
@@ -315,21 +297,21 @@ export default function PropertyDetails() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground" data-testid="text-property-description">{property.description}</p>
-                
+
                 <div className="grid grid-cols-4 gap-4 pt-4 border-t">
                   <div className="text-center">
                     <Bed className="h-6 w-6 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold" data-testid="text-beds">{property.beds}</p>
+                    <p className="text-2xl font-bold" data-testid="text-beds">{property.beds || 0}</p>
                     <p className="text-sm text-muted-foreground">Bedrooms</p>
                   </div>
                   <div className="text-center">
                     <Bath className="h-6 w-6 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold" data-testid="text-baths">{property.baths}</p>
+                    <p className="text-2xl font-bold" data-testid="text-baths">{property.baths || 0}</p>
                     <p className="text-sm text-muted-foreground">Bathrooms</p>
                   </div>
                   <div className="text-center">
                     <Maximize2 className="h-6 w-6 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold" data-testid="text-sqm">{property.sqm}</p>
+                    <p className="text-2xl font-bold" data-testid="text-sqm">{property.sqm || 0}</p>
                     <p className="text-sm text-muted-foreground">m²</p>
                   </div>
                   <div className="text-center">
@@ -341,21 +323,71 @@ export default function PropertyDetails() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-serif">Amenities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {(property.amenities || []).map((amenity: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500" />
-                      <span className="text-sm">{amenity}</span>
+            {/* Amenities Card */}
+            {property.amenities && property.amenities.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-serif">Amenities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {property.amenities.map((amenity: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-emerald-500" />
+                        <span className="text-sm">{amenity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Nearest To Card */}
+            {property.nearestTo && property.nearestTo.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-serif">Nearest To</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {property.nearestTo.map((location: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm">{location}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Minimum Stay Info */}
+            {property.minimumStayValue && property.minimumStayUnit && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-serif">Rental Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Minimum Stay</p>
+                      <p className="text-lg font-semibold">
+                        {property.minimumStayValue} {property.minimumStayUnit}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Classification</p>
+                      <Badge className={`
+                        ${property.classification === 'Long-Term' ? 'bg-blue-500' : 'bg-green-500'}
+                        text-white
+                      `}>
+                        {property.classification}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -390,7 +422,7 @@ export default function PropertyDetails() {
                     Next
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-7 gap-1">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                     <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
@@ -398,11 +430,10 @@ export default function PropertyDetails() {
                     </div>
                   ))}
                   {getDaysInMonth(selectedMonth).map((date, i) => (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       onClick={() => date && handleDateClick(date)}
-                      className={`text-center py-2 rounded text-sm transition-all ${
-                        date 
+                      className={`text-center py-2 rounded text-sm transition-all ${date
                           ? isPast(date)
                             ? 'bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed'
                             : isDateBooked(date)
@@ -413,7 +444,7 @@ export default function PropertyDetails() {
                                   ? 'bg-primary/20 text-primary border border-primary/30 cursor-pointer'
                                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer'
                           : ''
-                      }`}
+                        }`}
                       data-testid={date ? `calendar-date-${date.getDate()}` : undefined}
                     >
                       {date?.getDate() || ''}
@@ -443,9 +474,9 @@ export default function PropertyDetails() {
                         </div>
                       </>
                     )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => { setCheckInDate(null); setCheckOutDate(null); }}
                       className="ml-auto"
                     >
@@ -461,16 +492,20 @@ export default function PropertyDetails() {
             <Card className="sticky top-8">
               <CardHeader>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-primary" data-testid="text-price">€{property.price}</span>
-                  <span className="text-muted-foreground">/night</span>
+                  <span className="text-3xl font-bold text-primary" data-testid="text-price">{formatPrice()}</span>
                 </div>
+                {property.minimumStayValue && property.minimumStayUnit && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Minimum stay: {property.minimumStayValue} {property.minimumStayUnit}
+                  </p>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Check-in</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
                       value={formatDate(checkInDate)}
                       readOnly
@@ -480,8 +515,8 @@ export default function PropertyDetails() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Check-out</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
                       value={formatDate(checkOutDate)}
                       readOnly
@@ -494,7 +529,9 @@ export default function PropertyDetails() {
                 {checkInDate && checkOutDate && (
                   <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">€{property.price} x {calculateNights()} nights</span>
+                      <span className="text-muted-foreground">
+                        {typeof property.price === 'string' ? parseFloat(property.price) : property.price} x {calculateNights()} nights
+                      </span>
                       <span>€{calculateTotal()}</span>
                     </div>
                     <div className="flex justify-between font-semibold border-t pt-2">
@@ -503,33 +540,52 @@ export default function PropertyDetails() {
                     </div>
                   </div>
                 )}
-                
-                <Button 
-                  className="w-full bg-primary text-white" 
-                  size="lg" 
+
+                <Button
+                  className="w-full bg-primary text-white"
+                  size="lg"
                   onClick={handleBookNow}
                   disabled={!checkInDate || !checkOutDate}
                   data-testid="button-book-now"
                 >
                   Book Now
                 </Button>
-                
+
                 <div className="pt-4 border-t space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">License Number</span>
-                    <span className="font-medium">{property.licenseNumber}</span>
+                    <span className="font-medium">{property.licenseNumber || 'Not specified'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
-                    <Badge variant={property.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                    <Badge
+                      variant={
+                        property.status === 'published' ? 'default' :
+                          property.status === 'draft' ? 'secondary' :
+                            'destructive'
+                      }
+                      className="capitalize"
+                    >
                       {property.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Classification</span>
+                    <Badge
+                      className={`
+                        ${property.classification === 'Long-Term' ? 'bg-blue-500' : 'bg-green-500'}
+                        text-white
+                      `}
+                    >
+                      {property.classification}
                     </Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {agent && (
+            {/* Agent Information Card */}
+            {property.agency && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold text-muted-foreground uppercase">Listed by</CardTitle>
@@ -537,14 +593,27 @@ export default function PropertyDetails() {
                 <CardContent>
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                      {agent.name?.charAt(0) || 'A'}
+                      {property.agency.name?.charAt(0) || 'A'}
                     </div>
                     <div>
-                      <p className="font-medium" data-testid="text-agent-name">{agent.name}</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-agent-agency">{agent.agency}</p>
+                      <p className="font-medium" data-testid="text-agent-name">{property.agency.name}</p>
+                      {property.createdBy && (
+                        <p className="text-sm text-muted-foreground" data-testid="text-agent-agency">
+                          Agent: {property.createdBy.name}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <AgentContactDialog agent={agent} />
+                  <div className="mt-4">
+                    <AgentContactDialog
+                      agent={{
+                        name: property.agency.name,
+                        email: property.createdBy?.email,
+                        phone: property.createdBy?.phone,
+                        agency: property.agency.name
+                      }}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -558,7 +627,7 @@ export default function PropertyDetails() {
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">Complete Your Booking</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <h4 className="font-semibold">{property.title}</h4>
@@ -583,7 +652,7 @@ export default function PropertyDetails() {
                 <User className="h-4 w-4" />
                 Client Information
               </h4>
-              
+
               <div className="space-y-3">
                 <div>
                   <Label htmlFor="clientName">Full Name *</Label>
@@ -595,7 +664,7 @@ export default function PropertyDetails() {
                     data-testid="input-client-name"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="clientEmail">Email Address *</Label>
                   <Input
@@ -607,7 +676,7 @@ export default function PropertyDetails() {
                     data-testid="input-client-email"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="clientPhone">Phone Number *</Label>
                   <Input
@@ -635,20 +704,20 @@ export default function PropertyDetails() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setBookingDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 className="flex-1 bg-primary text-white"
                 onClick={handleSubmitBooking}
-                disabled={createBookingMutation.isPending}
+                // disabled={createBookingMutation.isPending}
                 data-testid="button-confirm-booking"
               >
-                {createBookingMutation.isPending ? "Creating..." : "Confirm Booking"}
+                {false ? "Creating..." : "Confirm Booking"}
               </Button>
             </div>
           </div>

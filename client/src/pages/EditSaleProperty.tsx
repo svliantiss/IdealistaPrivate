@@ -1,4 +1,4 @@
-// src/pages/properties/[id]/edit.tsx
+// src/pages/sales/[id]/edit.tsx
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,45 +25,49 @@ import {
   Bath, 
   Maximize2, 
   Euro, 
-  Calendar, 
   Home,
   Image as ImageIcon,
   Video,
   Trash2,
   Grid3x3,
   Plus,
-  Eye
+  Eye,
+  DollarSign
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import {
-  useRentalProperty,
-  useUpdateRentalProperty,
-  useUpdatePropertyStatus,
-  useDeleteRentalProperty,
+  useSalesProperty,
+  useUpdateSalesProperty,
+  useUpdateSalesPropertyStatus,
+  useDeleteSalesProperty,
   type Property,
   type UpdatePropertyInput
-} from "@/store/query/property.queries";
+} from "../store/query/property.queries"
 import { MediaManager } from "@/components/MediaManager";
 import { uploadToR2 } from "@/lib/utils";
-import type { MediaItem } from "@/store/query/property.queries";
 
-export default function EditProperty() {
+// Sales specific property type (remove rental-specific fields)
+interface SalesProperty extends Omit<Property, 'priceType' | 'minimumStayValue' | 'minimumStayUnit' | 'classification'> {
+  // Sales properties don't have priceType, minimum stay, or classification
+}
+
+export default function EditSalesProperty() {
   const params = useParams<{ id: string }>();
   const propertyId = parseInt(params.id || "0");
   const [, navigate] = useLocation();
 
-  // Use TanStack Query hooks
-  const { data: propertyData, isLoading } = useRentalProperty(propertyId);
-  const updateProperty = useUpdateRentalProperty();
-  const updateStatus = useUpdatePropertyStatus();
-  const deleteProperty = useDeleteRentalProperty();
+  // Use TanStack Query hooks for sales
+  const { data: propertyData, isLoading } = useSalesProperty(propertyId);
+  const updateProperty = useUpdateSalesProperty();
+  const updateStatus = useUpdateSalesPropertyStatus();
+  const deleteProperty = useDeleteSalesProperty();
 
-  console.log('📊 [EditProperty] Property data:', propertyData);
+  console.log('📊 [EditSalesProperty] Sales property data:', propertyData);
 
   // Extract property from the response
-  const property: Property | undefined = propertyData?.data || propertyData;
+  const property: SalesProperty | undefined = propertyData?.data || propertyData;
 
   const [formData, setFormData] = useState<UpdatePropertyInput>({
     title: "",
@@ -71,15 +75,12 @@ export default function EditProperty() {
     location: "",
     propertyType: "apartment",
     price: "",
-    priceType: "night",
     beds: 0,
     baths: 0,
     sqm: 0,
     amenities: [],
     nearestTo: [],
     media: [],
-    minimumStayValue: 1,
-    minimumStayUnit: "month",
     licenseNumber: "",
     status: "draft",
   });
@@ -88,25 +89,24 @@ export default function EditProperty() {
   const [nearestToInput, setNearestToInput] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [mediaManagerOpen, setMediaManagerOpen] = useState(false);
+  const [yearBuilt, setYearBuilt] = useState<string>("");
+  const [lotSize, setLotSize] = useState<string>("");
 
   useEffect(() => {
     if (property) {
-      console.log('📝 [EditProperty] Setting form data from property:', property);
+      console.log('📝 [EditSalesProperty] Setting form data from property:', property);
       setFormData({
         title: property.title || "",
         description: property.description || "",
         location: property.location || "",
         propertyType: property.propertyType || "apartment",
         price: property.price || "",
-        priceType: property.priceType || "night",
         beds: property.beds || 0,
         baths: property.baths || 0,
         sqm: property.sqm || 0,
         amenities: property.amenities || [],
         nearestTo: property.nearestTo || [],
         media: property.media || [],
-        minimumStayValue: property.minimumStayValue || 1,
-        minimumStayUnit: property.minimumStayUnit || "month",
         licenseNumber: property.licenseNumber || "",
         status: property.status || "draft",
       });
@@ -114,13 +114,17 @@ export default function EditProperty() {
       // Set comma-separated inputs
       setAmenitiesInput((property.amenities || []).join(", "));
       setNearestToInput((property.nearestTo || []).join(", "));
+      
+      // Extract additional sales data if available
+      if ((property as any).yearBuilt) setYearBuilt(String((property as any).yearBuilt));
+      if ((property as any).lotSize) setLotSize(String((property as any).lotSize));
     }
   }, [property]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📝 [EditProperty] Submitting form data:', formData);
+    console.log('📝 [EditSalesProperty] Submitting form data:', formData);
     
     // Convert amenities and nearestTo from comma-separated strings to arrays
     const amenitiesArray = amenitiesInput
@@ -143,37 +147,44 @@ export default function EditProperty() {
       sqm: Number(formData.sqm) || 0,
     };
 
-    console.log('📝 [EditProperty] Sending update data:', updateData);
+    // Add additional sales-specific fields
+    const additionalData: any = {};
+    if (yearBuilt) additionalData.yearBuilt = parseInt(yearBuilt);
+    if (lotSize) additionalData.lotSize = parseInt(lotSize);
+    
+    const finalUpdateData = { ...updateData, ...additionalData };
+
+    console.log('📝 [EditSalesProperty] Sending update data:', finalUpdateData);
 
     updateProperty.mutate(
-      { id: propertyId, data: updateData },
+      { id: propertyId, data: finalUpdateData },
       {
         onSuccess: (data) => {
-          console.log('✅ [EditProperty] Property updated successfully:', data);
-          toast.success("Property updated successfully");
-          navigate("/properties");
+          console.log('✅ [EditSalesProperty] Sales property updated successfully:', data);
+          toast.success("Sales property updated successfully");
+          navigate("/sales");
         },
         onError: (error) => {
-          console.error('❌ [EditProperty] Failed to update property:', error);
-          toast.error(error.message || "Failed to update property");
+          console.error('❌ [EditSalesProperty] Failed to update sales property:', error);
+          toast.error(error.message || "Failed to update sales property");
         },
       }
     );
   };
 
-  const handleStatusChange = (newStatus: 'draft' | 'published' | 'archived') => {
-    console.log('📝 [EditProperty] Changing status to:', newStatus);
+  const handleStatusChange = (newStatus: 'draft' | 'published' | 'archived' | 'sold') => {
+    console.log('📝 [EditSalesProperty] Changing status to:', newStatus);
     
     updateStatus.mutate(
       { id: propertyId, status: newStatus },
       {
         onSuccess: (data) => {
-          console.log('✅ [EditProperty] Status updated successfully:', data);
-          toast.success(`Property ${newStatus} successfully`);
-          setFormData(prev => ({ ...prev, status: newStatus }));
+          console.log('✅ [EditSalesProperty] Status updated successfully:', data);
+          toast.success(`Sales property ${newStatus} successfully`);
+          setFormData(prev => ({ ...prev, status: newStatus as any }));
         },
         onError: (error) => {
-          console.error('❌ [EditProperty] Failed to update status:', error);
+          console.error('❌ [EditSalesProperty] Failed to update status:', error);
           toast.error(error.message || "Failed to update status");
         },
       }
@@ -181,19 +192,19 @@ export default function EditProperty() {
   };
 
   const handleDeleteProperty = () => {
-    if (confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this sales property? This action cannot be undone.')) {
       setIsDeleting(true);
-      console.log('🗑️ [EditProperty] Deleting property:', propertyId);
+      console.log('🗑️ [EditSalesProperty] Deleting sales property:', propertyId);
       
       deleteProperty.mutate(propertyId, {
         onSuccess: (data) => {
-          console.log('✅ [EditProperty] Property deleted successfully:', data);
-          toast.success('Property deleted successfully');
-          navigate("/properties");
+          console.log('✅ [EditSalesProperty] Sales property deleted successfully:', data);
+          toast.success('Sales property deleted successfully');
+          navigate("/sales");
         },
         onError: (error) => {
-          console.error('❌ [EditProperty] Failed to delete property:', error);
-          toast.error(error.message || 'Failed to delete property');
+          console.error('❌ [EditSalesProperty] Failed to delete sales property:', error);
+          toast.error(error.message || 'Failed to delete sales property');
           setIsDeleting(false);
         }
       });
@@ -204,8 +215,8 @@ export default function EditProperty() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleMediaChange = (media: MediaItem[]) => {
-    console.log('📸 [EditProperty] Media updated:', media);
+  const handleMediaChange = (media: any[]) => {
+    console.log('📸 [EditSalesProperty] Media updated:', media);
     setFormData(prev => ({ ...prev, media }));
   };
 
@@ -220,7 +231,7 @@ export default function EditProperty() {
     return (
       <Layout>
         <div className="p-8">
-          <div className="text-center py-12">Loading property details...</div>
+          <div className="text-center py-12">Loading sales property details...</div>
         </div>
       </Layout>
     );
@@ -232,12 +243,12 @@ export default function EditProperty() {
         <div className="p-8">
           <div className="text-center py-12">
             <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-2xl font-bold mb-2">Property not found</h2>
-            <p className="text-muted-foreground mb-6">The property you're looking for doesn't exist or has been removed.</p>
-            <Link href="/properties">
+            <h2 className="text-2xl font-bold mb-2">Sales property not found</h2>
+            <p className="text-muted-foreground mb-6">The sales property you're looking for doesn't exist or has been removed.</p>
+            <Link href="/sales">
               <Button>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Properties
+                Back to Sales Properties
               </Button>
             </Link>
           </div>
@@ -254,14 +265,14 @@ export default function EditProperty() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/properties">
+            <Link href="/sales">
               <Button variant="ghost" size="icon" data-testid="button-back">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary">Edit Property</h1>
-              <p className="text-muted-foreground mt-1">Update your property listing details</p>
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary">Edit Sales Property</h1>
+              <p className="text-muted-foreground mt-1">Update your sales property listing details</p>
             </div>
           </div>
 
@@ -272,6 +283,7 @@ export default function EditProperty() {
                 px-3 py-1 font-medium
                 ${formData.status === 'published' ? 'bg-emerald-500' : 
                   formData.status === 'draft' ? 'bg-amber-500' : 
+                  formData.status === 'sold' ? 'bg-purple-500' :
                   'bg-gray-500'} 
                 text-white
               `}
@@ -310,6 +322,14 @@ export default function EditProperty() {
             disabled={updateStatus.isPending || formData.status === 'published'}
           >
             Publish Property
+          </Button>
+          <Button
+            variant={formData.status === 'sold' ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleStatusChange('sold')}
+            disabled={updateStatus.isPending || formData.status === 'sold'}
+          >
+            Mark as Sold
           </Button>
           <Button
             variant={formData.status === 'archived' ? "default" : "outline"}
@@ -389,18 +409,19 @@ export default function EditProperty() {
                         <SelectItem value="house">House</SelectItem>
                         <SelectItem value="condo">Condo</SelectItem>
                         <SelectItem value="townhouse">Townhouse</SelectItem>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="land">Land</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="licenseNumber">License Number *</Label>
+                    <Label htmlFor="licenseNumber">License Number</Label>
                     <Input
                       id="licenseNumber"
-                      value={formData.licenseNumber}
+                      value={formData.licenseNumber || ''}
                       onChange={(e) => handleFormChange('licenseNumber', e.target.value)}
                       placeholder="e.g., VUT-MA-12345"
-                      required
                       data-testid="input-license"
                     />
                   </div>
@@ -419,7 +440,7 @@ export default function EditProperty() {
               <CardContent className="space-y-4 pt-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label>Images & Videos ({formData.media.length})</Label>
+                    <Label>Images & Videos ({formData.media?.length || 0})</Label>
                     <Button
                       type="button"
                       size="sm"
@@ -430,9 +451,9 @@ export default function EditProperty() {
                     </Button>
                   </div>
 
-                  {formData.media.length > 0 ? (
+                  {formData.media && formData.media.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {formData.media.map((item, index) => (
+                      {formData.media.map((item: any, index: number) => (
                         <div key={index} className="relative group border rounded-md overflow-hidden bg-gray-100">
                           <div className="aspect-square">
                             {item.type === "image" ? (
@@ -524,45 +545,29 @@ export default function EditProperty() {
             <Card>
               <CardHeader className="border-b">
                 <CardTitle className="flex items-center gap-2">
-                  <Euro className="h-5 w-5" />
+                  <DollarSign className="h-5 w-5" />
                   Pricing & Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">
-                      Price (€) *
-                    </Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => handleFormChange('price', e.target.value)}
-                      placeholder="e.g., 250"
-                      required
-                      min="0"
-                      step="0.01"
-                      data-testid="input-price"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="priceType">Price Period *</Label>
-                    <Select
-                      value={formData.priceType}
-                      onValueChange={(value) => handleFormChange('priceType', value)}
-                    >
-                      <SelectTrigger data-testid="select-price-type">
-                        <SelectValue placeholder="Select period" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="night">Per Night</SelectItem>
-                        <SelectItem value="week">Per Week</SelectItem>
-                        <SelectItem value="month">Per Month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">
+                    Sale Price (€) *
+                  </Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => handleFormChange('price', e.target.value)}
+                    placeholder="e.g., 500,000"
+                    required
+                    min="0"
+                    step="1000"
+                    data-testid="input-price"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the total sale price for the property
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -618,37 +623,35 @@ export default function EditProperty() {
                   </div>
                 </div>
 
-                {/* Minimum Stay */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="minimumStayValue">Minimum Rental Duration *</Label>
-                    <Input
-                      id="minimumStayValue"
-                      type="number"
-                      value={formData.minimumStayValue}
-                      onChange={(e) => handleFormChange('minimumStayValue', parseInt(e.target.value) || 1)}
-                      placeholder="e.g., 4"
-                      required
-                      min="1"
-                      data-testid="input-minimum-stay-value"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="minimumStayUnit">Duration Unit *</Label>
-                    <Select
-                      value={formData.minimumStayUnit}
-                      onValueChange={(value) => handleFormChange('minimumStayUnit', value)}
-                    >
-                      <SelectTrigger data-testid="select-minimum-stay-unit">
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="days">Days</SelectItem>
-                        <SelectItem value="weeks">Weeks</SelectItem>
-                        <SelectItem value="months">Months</SelectItem>
-                        <SelectItem value="years">Years</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Additional Sales Information */}
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-3">Additional Information</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="yearBuilt">Year Built</Label>
+                      <Input
+                        id="yearBuilt"
+                        type="number"
+                        value={yearBuilt}
+                        onChange={(e) => setYearBuilt(e.target.value)}
+                        placeholder="e.g., 2010"
+                        min="1800"
+                        max={new Date().getFullYear()}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lotSize">Lot Size (m²)</Label>
+                      <Input
+                        id="lotSize"
+                        type="number"
+                        value={lotSize}
+                        onChange={(e) => setLotSize(e.target.value)}
+                        placeholder="e.g., 300"
+                        min="0"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -669,7 +672,7 @@ export default function EditProperty() {
                       id="amenities"
                       value={amenitiesInput}
                       onChange={(e) => setAmenitiesInput(e.target.value)}
-                      placeholder="Pool, WiFi, Air Conditioning, Parking, Sea View, Garden, BBQ, Terrace"
+                      placeholder="Pool, Garden, Terrace, Parking, Security, Gym, Wine Cellar, Home Office"
                       rows={3}
                       data-testid="input-amenities"
                     />
@@ -747,7 +750,7 @@ export default function EditProperty() {
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t">
-            <Link href="/properties">
+            <Link href="/sales">
               <Button variant="outline" type="button" disabled={isProcessing}>
                 Cancel
               </Button>
@@ -769,7 +772,7 @@ export default function EditProperty() {
       <MediaManager
         open={mediaManagerOpen}
         onOpenChange={setMediaManagerOpen}
-        media={formData.media}
+        media={formData.media || []}
         onMediaChange={handleMediaChange}
         uploadToR2={uploadToR2}
       />

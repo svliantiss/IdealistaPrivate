@@ -402,11 +402,11 @@ export class PropertiesController {
   }
 
   // Create sales property
-  async createSalesProperty(req: Request, res: Response) {
+  async createSalesProperty(req: any, res: Response) {
+
     try {
       const {
         agencyId,
-        agentId,
         title,
         description,
         location,
@@ -418,15 +418,15 @@ export class PropertiesController {
         amenities,
         media
       } = req.body;
-
-      if (!agencyId || !agentId || !title || !location || !propertyType || !price) {
+      console.log({ body: req.body })
+      if (!agencyId || !title || !location || !propertyType || !price) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
 
       const property = await prisma.salesProperty.create({
         data: {
           agencyId: Number(agencyId),
-          agentId: Number(agentId),
+          agentId: Number(req.agent.id),
           title,
           description,
           location,
@@ -657,8 +657,138 @@ export class PropertiesController {
       res.status(500).json({ success: false, error: 'Failed to fetch sales property' });
     }
   }
+
+
+
+
+
+  // Update sales property
+  async updateSalesProperty(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      // Convert price to Decimal if present
+      if (updates.price) {
+        updates.price = new Decimal(updates.price);
+      }
+
+      // Remove fields that shouldn't be updated directly
+      delete updates.id;
+      delete updates.createdAt;
+      delete updates.agencyId;
+      delete updates.agentId;
+
+      const property = await prisma.salesProperty.update({
+        where: { id: Number(id) },
+        data: updates,
+        include: {
+          agency: {
+            select: { name: true }
+          },
+          agent: {
+            select: { name: true, email: true }
+          }
+        }
+      });
+
+      res.json({ success: true, data: property });
+    } catch (error: any) {
+      console.error('Error updating sales property:', error);
+
+      if (error.code === 'P2025') {
+        return res.status(404).json({ success: false, error: 'Sales property not found' });
+      }
+
+      res.status(500).json({ success: false, error: 'Failed to update sales property' });
+    }
+  }
+
+  // Delete sales property
+  async deleteSalesProperty(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // Check if property has transactions
+      const transactions = await prisma.salesTransaction.count({
+        where: { propertyId: Number(id) }
+      });
+
+      if (transactions > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot delete sales property with existing transactions. Archive it instead.'
+        });
+      }
+
+      await prisma.salesProperty.delete({
+        where: { id: Number(id) }
+      });
+
+      res.json({ success: true, message: 'Sales property deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting sales property:', error);
+
+      if (error.code === 'P2025') {
+        return res.status(404).json({ success: false, error: 'Sales property not found' });
+      }
+
+      res.status(500).json({ success: false, error: 'Failed to delete sales property' });
+    }
+  }
+  
+  async updateSalesPropertyStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      // Validate status - include 'sold' for sales properties
+      if (!['draft', 'published', 'archived', 'sold'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid status. Must be one of: draft, published, archived, sold'
+        });
+      }
+
+      const property = await prisma.salesProperty.update({
+        where: { id: Number(id) },
+        data: { status },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          price: true,
+          propertyType: true,
+          location: true
+        }
+      });
+
+      res.json({
+        success: true,
+        data: property,
+        message: `Sales property status updated to ${status}`
+      });
+    } catch (error: any) {
+      console.error('Error updating sales property status:', error);
+
+      if (error.code === 'P2025') {
+        return res.status(404).json({
+          success: false,
+          error: 'Sales property not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update sales property status'
+      });
+    }
+  }
+
+  //
 }
 
 
 
 export default new PropertiesController();
+

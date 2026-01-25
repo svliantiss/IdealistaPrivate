@@ -62,6 +62,8 @@ export const updateProfileController = async (req: Request, res: Response) => {
       website,
     } = req.body;
 
+
+
     // 1️⃣ Update agent personal info
     const updatedAgent = await prisma.agent.update({
       where: { id: agent.id },
@@ -70,7 +72,6 @@ export const updateProfileController = async (req: Request, res: Response) => {
         phone,
       },
     });
-
     // 2️⃣ Update agency info (only if agent belongs to one)
     if (agent.agencyId) {
       // OPTIONAL but RECOMMENDED: check admin role
@@ -79,7 +80,8 @@ export const updateProfileController = async (req: Request, res: Response) => {
           error: "Only agency admins can update agency information",
         });
       }
-
+      
+      console.log({agencyName, color, locations, logo, agencyPhone, agencyEmail, website});
       await prisma.agency.update({
         where: { id: agent.agencyId },
         data: {
@@ -90,6 +92,7 @@ export const updateProfileController = async (req: Request, res: Response) => {
           phone: agencyPhone,
           email: agencyEmail,
           website,
+          
         },
       });
     }

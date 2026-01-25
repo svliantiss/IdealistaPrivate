@@ -104,7 +104,7 @@ export const verifyLoginOtpController = async (req: Request, res: Response) => {
     where: { email },
     include: { agency: true },
   });
-
+  console.log({ loginAgent: agent });
   if (!agent) return res.status(404).json({ error: "Agent not found" });
 
   const token = signToken(agent.id, agent.email);

@@ -502,7 +502,7 @@ export function AddPropertyDialog({
                       <div className="col-span-2 mt-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Classification:</span>
-                          {classification && (
+                          {/* {classification && (
                             <Badge 
                               className={`
                                 px-2 py-1 text-xs font-medium
@@ -523,7 +523,7 @@ export function AddPropertyDialog({
                                 } months)
                               </span>
                             </Badge>
-                          )}
+                          )} */}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {classification === "Long-Term" 

@@ -1,4 +1,4 @@
-import { useProfile, useUpdateProfile } from './../../store/api/profileApi';
+import { useProfile } from './../../store/api/profileApi';
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -18,11 +18,44 @@ import {
 
 import logoImg from "@assets/generated_images/minimalist_building_logo_icon.png";
 import { logout } from "@/store/slices/authSlice";
+import { useEffect } from "react";
 
+/**
+ * Sidebar component for application navigation and user account management.
+ * 
+ * @component
+ * @returns {JSX.Element} A fixed left-side navigation sidebar with:
+ * - Agency logo and name header
+ * - Main navigation items (Dashboard, Team Stats)
+ * - Expandable "My Properties" section with sub-items (My Rentals, For Sale)
+ * - Bottom navigation items (Bookings, Find House)
+ * - User account profile section with logout functionality
+ * 
+ * @remarks
+ * - Uses `useLocation` hook to track current route and highlight active navigation items
+ * - Uses `useProfile` hook to fetch and display user/agency profile data
+ * - The "My Properties" section expands/collapses based on current location or user interaction
+ * - Sidebar width is fixed at 64 units (256px) and spans full viewport height
+ * - Active navigation items are highlighted with primary theme colors
+ * 
+ * @example
+ * ```tsx
+ * <Sidebar />
+ * ```
+ */
 export function Sidebar() {
   const [location, navigate] = useLocation();
   const dispatch = useDispatch();
-  const { data: profile } = useProfile();
+
+  //Run useProfile to fetch latest profile data with hooks useEffect in case of updates
+
+  useEffect(() => {
+    // useProfile hook automatically refetches data on mount
+  }, []);
+  
+  let { data: profile } = useProfile();
+
+  profile = useSelector((state: any) => state.auth.agent) || profile
 
   const handleLogout = () => {
     dispatch(logout());
@@ -162,14 +195,14 @@ export function Sidebar() {
         <Link href="/account">
           <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent cursor-pointer mb-2">
             <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold border border-sidebar-primary/30">
-              {`${profile?.name?.split(' ')?.[0]?.[0]}${profile?.name?.split(' ')?.[1]?.[0]}` || 'A'}
+              {`${profile && profile.name && profile.name.split(' ')[0] && profile?.name?.split(' ')?.[0]?.[0]}${profile && profile.name && profile.name.split(' ')[1] && profile?.name?.split(' ')?.[1]?.[0]}` || 'A'}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium truncate">
                 {profile?.name?.split(' ')[0] || '—'}
               </p>
               <p className="text-xs text-sidebar-foreground/60 truncate">
-                {profile?.name || '—'}
+                {profile?.email || '—'}
               </p>
 
             </div>

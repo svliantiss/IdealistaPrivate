@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { requestLoginOtp, verifyLoginOtp } from "./../api/onboarding.api";
+import { getMe, requestLoginOtp, verifyLoginOtp } from "./../api/onboarding.api";
 import { useDispatch } from "react-redux";
 import { Agent, setAgent } from "../slices/authSlice";
 import { setLoading } from "../slices/uiSlice";
@@ -23,9 +23,21 @@ export const useVerifyLoginOtp = () => {
         mutationFn: (data) => {
             return verifyLoginOtp(data)
         },
-        onSuccess: (data) => {
-            dispatch(setAgent(data.agent));
+        onSuccess: (data: any) => {
             localStorage.setItem("token", data.token);
+            let agentData = {
+                id: data.agent.id,
+                email: data.agent.email,
+                name: data.agent.name,
+                emailVerified: data.agent.emailVerified,
+                onboardingStep: data.agent.onboardingStep,
+                agency: data.agent.agency,
+                color: data.agent.agency?.primaryColor,
+                agencyPhone: data.agent.agency?.phone,
+                location: data.agent.agency?.locations,
+            }
+            console.log("Login successful:", agentData);
+            dispatch(setAgent(agentData));
         },
 
     });

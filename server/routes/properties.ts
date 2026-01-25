@@ -17,9 +17,9 @@ router.delete('/rental/:id', authMiddleware, PropertiesController.deleteRentalPr
 // ==========================
 // SALES PROPERTIES ROUTES
 // ==========================
+router.patch('/sales/:id', authMiddleware, PropertiesController.updateSalesProperty);
 router.get('/sales', authMiddleware, PropertiesController.getSalesProperties);
 router.get('/sales/:id', authMiddleware, PropertiesController.getSalesProperty);
-router.patch('/sales/:id', authMiddleware, PropertiesController.updateSalesProperty);
 router.delete('/sales/:id', authMiddleware, PropertiesController.deleteSalesProperty);
 router.patch('/sales/:id/status', authMiddleware, PropertiesController.updateSalesPropertyStatus);
 

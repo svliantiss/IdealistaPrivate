@@ -16,7 +16,7 @@ interface PropertyAvailabilityDialogProps {
   showLabel?: boolean;
 }
 
-export function PropertyAvailabilityDialog({ propertyId, propertyTitle, showLabel = false }: PropertyAvailabilityDialogProps) {
+export function PropertyAvailabilityDialog({ propertyId, propertyTitle, showLabel = true }: PropertyAvailabilityDialogProps) {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [open, setOpen] = useState(false);
 

@@ -49,7 +49,8 @@ export const useUpdateProfile = () => {
 
     return useMutation({
         mutationFn: async (payload: {
-            agency?: string;
+            agencyName?: string;
+            agencyEmail?: string;
             color?: string;
             website?: string;
             agencyPhone?: string;

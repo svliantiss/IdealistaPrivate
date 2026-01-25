@@ -10,13 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -35,7 +28,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Grid3x3, Upload, Image as ImageIcon, Video, X, GripVertical, Trash2 } from "lucide-react";
+import { Grid3x3, Upload, Image as ImageIcon, Video, X, GripVertical, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { MediaItem } from "@/store/query/property.queries";
 
@@ -47,11 +40,22 @@ interface MediaManagerProps {
   uploadToR2: (file: File) => Promise<string>;
 }
 
-function SortableMediaItem({ item, index, onRemove }: {
+interface PendingMediaItem {
+  type: "image" | "video";
+  file: File;
+  title: string;
+  isUploading?: boolean;
+}
+
+function SortableMediaItem({ item, index, onRemove, onTitleChange }: {
   item: MediaItem;
   index: number;
   onRemove: (index: number) => void;
+  onTitleChange: (index: number, title: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(item.title);
+  
   const {
     attributes,
     listeners,
@@ -67,13 +71,36 @@ function SortableMediaItem({ item, index, onRemove }: {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleSaveTitle = () => {
+    onTitleChange(index, title);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle();
+    } else if (e.key === 'Escape') {
+      setTitle(item.title);
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="relative group border rounded-md overflow-hidden bg-white">
       <div className="absolute top-2 left-2 z-10 cursor-grab" {...attributes} {...listeners}>
         <GripVertical className="h-4 w-4 text-white/80" />
       </div>
 
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-2 right-2 z-10 flex gap-1">
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="h-6 w-6 bg-black/60 hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => setIsEditing(true)}
+        >
+          <Pencil className="h-3 w-3 text-white" />
+        </Button>
         <Button
           type="button"
           variant="destructive"
@@ -95,30 +122,48 @@ function SortableMediaItem({ item, index, onRemove }: {
         ) : (
           <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center">
             <Video className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-xs text-gray-500">{item.title}</span>
+            <span className="text-xs text-gray-500">Video</span>
           </div>
         )}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-        <div className="flex items-center gap-1 text-white text-xs">
-          {item.type === "image" ? (
-            <ImageIcon className="h-3 w-3" />
-          ) : (
-            <Video className="h-3 w-3" />
-          )}
-          <span className="truncate">{item.title}</span>
-        </div>
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 min-h-[40px]">
+        {isEditing ? (
+          <div className="flex items-center gap-1">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="h-6 text-xs text-white bg-black/50 border-white/30 placeholder:text-white/50"
+              placeholder="Enter title"
+              autoFocus
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={handleSaveTitle}
+            >
+              Save
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-white text-xs cursor-pointer" onClick={() => setIsEditing(true)}>
+            {item.type === "image" ? (
+              <ImageIcon className="h-3 w-3 flex-shrink-0" />
+            ) : (
+              <Video className="h-3 w-3 flex-shrink-0" />
+            )}
+            <span className="truncate">{item.title || "Untitled"}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export function MediaManager({ open, onOpenChange, media, onMediaChange, uploadToR2 }: MediaManagerProps) {
-  const [newMedia, setNewMedia] = useState<Omit<MediaItem, 'url'> & { file?: File }>({
-    type: "image",
-    title: "",
-  });
+  const [pendingUploads, setPendingUploads] = useState<PendingMediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,65 +186,107 @@ export function MediaManager({ open, onOpenChange, media, onMediaChange, uploadT
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
+    const validFiles: PendingMediaItem[] = [];
 
-    if (!isImage && !isVideo) {
-      toast.error('Please select an image or video file');
-      return;
-    }
+    files.forEach(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
 
-    setNewMedia(prev => ({
-      ...prev,
-      type: isImage ? "image" : "video",
-      file,
-      title: file.name.replace(/\.[^/.]+$/, ""),
-    }));
-  };
+      if (!isImage && !isVideo) {
+        toast.error(`"${file.name}" is not a valid image or video file`);
+        return;
+      }
 
-  const handleUpload = async () => {
-    if (!newMedia.file) {
-      toast.error('Please select a file to upload');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      const publicUrl = await uploadToR2(newMedia.file);
-      
-      const newMediaItem: MediaItem = {
-        type: newMedia.type,
-        url: publicUrl,
-        title: newMedia.title || newMedia.file.name.replace(/\.[^/.]+$/, ""),
-      };
-
-      onMediaChange([...media, newMediaItem]);
-      
-      toast.success('Media uploaded successfully!');
-      setNewMedia({
-        type: "image",
-        title: "",
+      validFiles.push({
+        type: isImage ? "image" : "video" as "image" | "video",
+        file,
+        title: file.name.replace(/\.[^/.]+$/, ""),
       });
+    });
+
+    if (validFiles.length > 0) {
+      setPendingUploads(prev => [...prev, ...validFiles]);
+      toast.success(`Added ${validFiles.length} file(s) to upload queue`);
       
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleUploadAll = async () => {
+    if (pendingUploads.length === 0) {
+      toast.error('Please select files to upload first');
+      return;
+    }
+
+    setUploading(true);
+    const uploadedItems: MediaItem[] = [];
+    const remainingUploads = [...pendingUploads];
+
+    try {
+      // Process uploads sequentially
+      for (const pendingItem of remainingUploads) {
+        const itemIndex = pendingUploads.findIndex(item => item.file === pendingItem.file);
+        
+        // Mark as uploading
+        setPendingUploads(prev => prev.map((item, idx) => 
+          idx === itemIndex ? { ...item, isUploading: true } : item
+        ));
+
+        try {
+          const publicUrl = await uploadToR2(pendingItem.file);
+          
+          uploadedItems.push({
+            type: pendingItem.type,
+            url: publicUrl,
+            title: pendingItem.title || pendingItem.file.name.replace(/\.[^/.]+$/, ""),
+          });
+
+          // Remove from pending after successful upload
+          setPendingUploads(prev => prev.filter(item => item.file !== pendingItem.file));
+          
+        } catch (error) {
+          console.error(`Failed to upload ${pendingItem.file.name}:`, error);
+          toast.error(`Failed to upload "${pendingItem.file.name}"`);
+          
+          // Remove uploading state
+          setPendingUploads(prev => prev.map(item => 
+            item.file === pendingItem.file ? { ...item, isUploading: false } : item
+          ));
+        }
+      }
+
+      // Add all uploaded items to media library
+      if (uploadedItems.length > 0) {
+        onMediaChange([...media, ...uploadedItems]);
+        toast.success(`Successfully uploaded ${uploadedItems.length} file(s)!`);
+      }
     } catch (error) {
-      console.error('Upload failed:', error);
-      toast.error('Failed to upload media. Please try again.');
+      console.error('Upload process failed:', error);
+      toast.error('Upload process failed');
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleRemovePending = (index: number) => {
+    setPendingUploads(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveMedia = (index: number) => {
     const newMediaArray = media.filter((_, i) => i !== index);
     onMediaChange(newMediaArray);
     toast.success('Media removed');
+  };
+
+  const handleTitleChange = (index: number, title: string) => {
+    const newMediaArray = [...media];
+    newMediaArray[index] = { ...newMediaArray[index], title };
+    onMediaChange(newMediaArray);
   };
 
   const handleSaveChanges = () => {
@@ -217,103 +304,93 @@ export function MediaManager({ open, onOpenChange, media, onMediaChange, uploadT
         <div className="space-y-6">
           {/* Upload Section */}
           <div className="space-y-4 p-4 border rounded-lg">
-            <h3 className="font-semibold">Add New Media</h3>
+            <h3 className="font-semibold">Upload Media</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="mediaType">Media Type</Label>
-                <Select
-                  value={newMedia.type}
-                  onValueChange={(value: "image" | "video") =>
-                    setNewMedia(prev => ({ ...prev, type: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="mediaTitle">Title</Label>
-                <Input
-                  id="mediaTitle"
-                  value={newMedia.title}
-                  onChange={(e) => setNewMedia(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter media title"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label>Upload File</Label>
-                <Input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  accept="image/*,video/*"
-                  className="cursor-pointer"
-                />
+                <Label>Upload Files</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*,video/*"
+                    className="cursor-pointer"
+                    multiple
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleUploadAll}
+                    disabled={uploading || pendingUploads.length === 0}
+                    className="whitespace-nowrap"
+                  >
+                    {uploading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload All ({pendingUploads.length})
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Supported: JPG, PNG, GIF, MP4, MOV, AVI
+                  Select multiple images and videos (JPG, PNG, GIF, MP4, MOV, AVI)
                 </p>
               </div>
 
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  onClick={handleUpload}
-                  disabled={uploading || !newMedia.file}
-                  className="w-full"
-                >
-                  {uploading ? (
-                    <>
-                      <span className="animate-spin mr-2">⏳</span>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload & Add
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {newMedia.file && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {newMedia.type === "image" ? (
-                      <ImageIcon className="h-4 w-4 text-blue-500" />
-                    ) : (
-                      <Video className="h-4 w-4 text-red-500" />
-                    )}
-                    <span className="text-sm font-medium">{newMedia.file.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({(newMedia.file.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
+              {/* Pending Uploads */}
+              {pendingUploads.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Files to upload ({pendingUploads.length})</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {pendingUploads.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {item.isUploading ? (
+                            <div className="h-4 w-4 animate-spin border-2 border-primary border-t-transparent rounded-full" />
+                          ) : item.type === "image" ? (
+                            <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          ) : (
+                            <Video className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm truncate">{item.file.name}</span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            ({(item.file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={item.title}
+                            onChange={(e) => {
+                              const newUploads = [...pendingUploads];
+                              newUploads[index].title = e.target.value;
+                              setPendingUploads(newUploads);
+                            }}
+                            className="h-6 text-xs w-32"
+                            placeholder="Title (optional)"
+                            disabled={item.isUploading}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6"
+                            onClick={() => handleRemovePending(index)}
+                            disabled={item.isUploading}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setNewMedia(prev => ({ ...prev, file: undefined }));
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Media Grid */}
@@ -342,6 +419,7 @@ export function MediaManager({ open, onOpenChange, media, onMediaChange, uploadT
                         item={item}
                         index={index}
                         onRemove={handleRemoveMedia}
+                        onTitleChange={handleTitleChange}
                       />
                     ))}
                   </div>

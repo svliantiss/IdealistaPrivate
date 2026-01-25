@@ -24,18 +24,15 @@ export class PropertiesController {
   // RENTAL PROPERTIES
   // ==========================
 
-  // Get all rental properties (with filtering)
-  async getRentalProperties(req: Request, res: Response) {
+  async getRentalProperties(req: any, res: Response) {
     try {
       const {
-        agencyId,
         status,
         propertyType,
         minPrice,
         maxPrice,
         location,
         beds,
-        agentId,
         search,
         page = 1,
         limit = 10
@@ -43,12 +40,31 @@ export class PropertiesController {
 
       const skip = (Number(page) - 1) * Number(limit);
 
-      const where: any = {};
+      // Get the authenticated agent
+      const agentId = Number(req.agent.id);
+      console.log({ agentId });
 
-      if (agencyId) where.agencyId = Number(agencyId);
+      // First, get the agent's agency ID
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { agencyId: true }
+      });
+
+      if (!agent) {
+        return res.status(404).json({
+          success: false,
+          error: 'Agent not found'
+        });
+      }
+
+      // Build the where clause - only show properties from the agent's agency
+      const where: any = {
+        agencyId: agent.agencyId
+      };
+
+      // Add filters
       if (status) where.status = status;
       if (propertyType) where.propertyType = propertyType;
-      if (agentId) where.createdById = Number(agentId);
       if (location) where.location = { contains: location, mode: 'insensitive' };
       if (beds) where.beds = { gte: Number(beds) };
 
@@ -66,15 +82,30 @@ export class PropertiesController {
         if (maxPrice) where.price.lte = new Decimal(maxPrice as string);
       }
 
+      // Fetch properties only from the agent's agency
       const [properties, total] = await Promise.all([
         prisma.property.findMany({
           where,
           include: {
             agency: {
-              select: { name: true, logo: true }
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+                primaryColor: true,
+                secondaryColor: true,
+                phone: true,
+                email: true,
+                website: true
+              }
             },
             createdBy: {
-              select: { name: true, email: true, phone: true }
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true
+              }
             },
             availability: {
               where: { isAvailable: true },
@@ -98,9 +129,14 @@ export class PropertiesController {
           pages: Math.ceil(total / Number(limit))
         }
       });
+      console.log('✅ Rental properties fetched successfully', properties);
     } catch (error) {
       console.error('Error fetching rental properties:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch properties' });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch properties',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   }
 
@@ -137,12 +173,9 @@ export class PropertiesController {
   }
 
   // Create rental property
-  async createRentalProperty(req: Request, res: Response) {
+  async createRentalProperty(req: any, res: Response) {
     try {
       const {
-        minimumStayDuration,
-        agencyId,
-        createdById,
         title,
         description,
         location,
@@ -159,6 +192,8 @@ export class PropertiesController {
         licenseNumber
       } = req.body;
 
+      const agencyId = req.agent.agencyId;
+      const createdById = req.agent.id;
 
       // Validate required fields
       if (!agencyId || !createdById || !title || !location || !propertyType || !price) {
@@ -327,7 +362,7 @@ export class PropertiesController {
   // ==========================
 
   // Get all sales properties
-  async getSalesProperties(req: Request, res: Response) {
+  async getSalesProperties(req: any, res: Response) {
     try {
       const {
         agencyId,
@@ -335,15 +370,30 @@ export class PropertiesController {
         propertyType,
         minPrice,
         maxPrice,
-        agentId,
         search,
         page = 1,
         limit = 10
       } = req.query;
 
+      const agentId = Number(req.agent.id);
+
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { agencyId: true }
+      });
+
+      if (!agent) {
+        return res.status(404).json({
+          success: false,
+          error: 'Agent not found'
+        });
+      }
+
       const skip = (Number(page) - 1) * Number(limit);
 
-      const where: any = {};
+      const where: any = {
+        agencyId: agent.agencyId
+      };
 
       if (agencyId) where.agencyId = Number(agencyId);
       if (status) where.status = status;
@@ -406,7 +456,6 @@ export class PropertiesController {
 
     try {
       const {
-        agencyId,
         title,
         description,
         location,
@@ -418,6 +467,8 @@ export class PropertiesController {
         amenities,
         media
       } = req.body;
+      const agencyId = req.agent.agencyId;
+
       console.log({ body: req.body })
       if (!agencyId || !title || !location || !propertyType || !price) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -736,7 +787,7 @@ export class PropertiesController {
       res.status(500).json({ success: false, error: 'Failed to delete sales property' });
     }
   }
-  
+
   async updateSalesPropertyStatus(req: Request, res: Response) {
     try {
       const { id } = req.params;

@@ -36,6 +36,8 @@ import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
 import { useAuthQuery } from "./store/api/onboarding.api";
 import SalesPropertyDetails from "./pages/ViewSalesProperties";
 import EditSalesProperty from "./pages/EditSaleProperty";
+import { SalesListing } from "./pages/Public/SalesProperties";
+import { RentalListing } from "./pages/Public/RentalsProperties";
 
 
 
@@ -73,6 +75,10 @@ function Router() {
       <ProtectedRoute path="/" component={Onboarding} />
 
       {/* Admin (separate auth later if needed) */}
+      <Route path="/general/rentals" component={AdminLogin} />
+      <Route path="/general/sales" component={SalesListing} />
+      <Route path="/general/rentals/:id" component={RentalListing} />
+      <Route path="/general/sales/:id" component={SalesListing} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
 

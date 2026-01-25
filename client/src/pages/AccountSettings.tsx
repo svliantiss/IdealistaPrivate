@@ -116,20 +116,22 @@ export default function AccountSettings() {
     updateAgencyData("logo", file);
   };
 
+  const updateProfile = useUpdateProfile();
   const handleSaveAgency = () => {
-    const updateProfile = useUpdateProfile();
+    console.log({ agencyDataName: agencyData.name });
     updateProfile.mutate({
-      agency: agencyData.name,
+      agencyName: agencyData.name,
       color: agencyData.color,
       website: agencyData.website,
       agencyPhone: agencyData.phone,
       locations: agencyData.locations,
       logoFile: agencyData.logo,
+      logo: agencyData.logoUrl,
     });
   };
 
   const handleSaveUser = () => {
-    const updateProfile = useUpdateProfile();
+
     updateProfile.mutate({
       name: userData.name,
       email: userData.email,

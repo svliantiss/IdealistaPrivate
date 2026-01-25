@@ -117,7 +117,7 @@ export default function Sales() {
                       <span className="text-sm">No image available</span>
                     </div>
                   )}
-                  <Badge className="absolute top-2 right-2 bg-emerald-500">
+                  {/* <Badge className="absolute top-2 right-2 bg-emerald-500">
                     {property.propertyType}
                   </Badge>
                   <Badge className={`absolute top-2 left-2 ${
@@ -128,7 +128,7 @@ export default function Sales() {
                       : 'bg-gray-500'
                   }`}>
                     {property.status}
-                  </Badge>
+                  </Badge> */}
                 </div>
 
                 <CardHeader className="pb-3">

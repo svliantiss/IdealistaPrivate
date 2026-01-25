@@ -1,0 +1,436 @@
+I need to modify the controller to only fetch properties that belong to the authenticated agent's agency. Here's the updated `getRentalProperties` method:
+
+```typescript
+async getRentalProperties(req: any, res: Response) {
+  try {
+    const {
+      status,
+      propertyType,
+      minPrice,
+      maxPrice,
+      location,
+      beds,
+      search,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Get the authenticated agent
+    const agentId = Number(req.agent.id);
+    
+    // First, get the agent's agency ID
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { agencyId: true }
+    });
+
+    if (!agent) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Agent not found' 
+      });
+    }
+
+    // Build the where clause - only show properties from the agent's agency
+    const where: any = {
+      agencyId: agent.agencyId
+    };
+
+    // Add filters
+    if (status) where.status = status;
+    if (propertyType) where.propertyType = propertyType;
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (beds) where.beds = { gte: Number(beds) };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search as string, mode: 'insensitive' } },
+        { description: { contains: search as string, mode: 'insensitive' } },
+        { location: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = new Decimal(minPrice as string);
+      if (maxPrice) where.price.lte = new Decimal(maxPrice as string);
+    }
+
+    // Fetch properties only from the agent's agency
+    const [properties, total] = await Promise.all([
+      prisma.property.findMany({
+        where,
+        include: {
+          agency: {
+            select: { 
+              id: true,
+              name: true, 
+              logo: true,
+              primaryColor: true,
+              secondaryColor: true,
+              phone: true,
+              email: true,
+              website: true
+            }
+          },
+          createdBy: {
+            select: { 
+              id: true,
+              name: true, 
+              email: true, 
+              phone: true 
+            }
+          },
+          availability: {
+            where: { isAvailable: true },
+            orderBy: { startDate: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: Number(limit)
+      }),
+      prisma.property.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: properties,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching rental properties:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch properties',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+```
+
+## Also update the `getRentalProperty` method:
+
+```typescript
+async getRentalProperty(req: any, res: Response) {
+  try {
+    const { id } = req.params;
+    const propertyId = parseInt(id);
+
+    if (isNaN(propertyId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid property ID'
+      });
+    }
+
+    // Get the authenticated agent's agency
+    const agentId = Number(req.agent.id);
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { agencyId: true }
+    });
+
+    if (!agent) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Agent not found' 
+      });
+    }
+
+    // Find property only if it belongs to the agent's agency
+    const property = await prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        agencyId: agent.agencyId // Ensure property belongs to agent's agency
+      },
+      include: {
+        agency: {
+          select: { 
+            id: true,
+            name: true, 
+            logo: true,
+            primaryColor: true,
+            secondaryColor: true,
+            phone: true,
+            email: true,
+            website: true
+          }
+        },
+        createdBy: {
+          select: { 
+            id: true,
+            name: true, 
+            email: true, 
+            phone: true 
+          }
+        },
+        availability: {
+          orderBy: { startDate: 'asc' }
+        },
+        bookings: {
+          include: {
+            ownerAgent: {
+              select: { name: true, email: true, phone: true }
+            },
+            bookingAgent: {
+              select: { name: true, email: true, phone: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found or you do not have access to this property'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: property
+    });
+  } catch (error) {
+    console.error('Error fetching rental property:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch property',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+```
+
+## Update the Sales Property methods too:
+
+```typescript
+async getSalesProperties(req: any, res: Response) {
+  try {
+    const {
+      status,
+      propertyType,
+      minPrice,
+      maxPrice,
+      location,
+      beds,
+      search,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Get the authenticated agent's agency
+    const agentId = Number(req.agent.id);
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { agencyId: true }
+    });
+
+    if (!agent) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Agent not found' 
+      });
+    }
+
+    // Build where clause - only show sales properties from the agent's agency
+    const where: any = {
+      agencyId: agent.agencyId
+    };
+
+    // Add filters
+    if (status) where.status = status;
+    if (propertyType) where.propertyType = propertyType;
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (beds) where.beds = { gte: Number(beds) };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search as string, mode: 'insensitive' } },
+        { description: { contains: search as string, mode: 'insensitive' } },
+        { location: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = new Decimal(minPrice as string);
+      if (maxPrice) where.price.lte = new Decimal(maxPrice as string);
+    }
+
+    // Fetch sales properties only from the agent's agency
+    const [properties, total] = await Promise.all([
+      prisma.salesProperty.findMany({
+        where,
+        include: {
+          agency: {
+            select: { 
+              id: true,
+              name: true, 
+              logo: true,
+              primaryColor: true,
+              secondaryColor: true,
+              phone: true,
+              email: true,
+              website: true
+            }
+          },
+          agent: {
+            select: { 
+              id: true,
+              name: true, 
+              email: true, 
+              phone: true 
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: Number(limit)
+      }),
+      prisma.salesProperty.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: properties,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching sales properties:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch properties',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+async getSalesProperty(req: any, res: Response) {
+  try {
+    const { id } = req.params;
+    const propertyId = parseInt(id);
+
+    if (isNaN(propertyId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid property ID'
+      });
+    }
+
+    // Get the authenticated agent's agency
+    const agentId = Number(req.agent.id);
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { agencyId: true }
+    });
+
+    if (!agent) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Agent not found' 
+      });
+    }
+
+    // Find sales property only if it belongs to the agent's agency
+    const property = await prisma.salesProperty.findFirst({
+      where: {
+        id: propertyId,
+        agencyId: agent.agencyId // Ensure property belongs to agent's agency
+      },
+      include: {
+        agency: {
+          select: { 
+            id: true,
+            name: true, 
+            logo: true,
+            primaryColor: true,
+            secondaryColor: true,
+            phone: true,
+            email: true,
+            website: true
+          }
+        },
+        agent: {
+          select: { 
+            id: true,
+            name: true, 
+            email: true, 
+            phone: true 
+          }
+        },
+        transactions: {
+          include: {
+            sellerAgent: {
+              select: { name: true, email: true, phone: true }
+            },
+            buyerAgent: {
+              select: { name: true, email: true, phone: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        error: 'Sales property not found or you do not have access to this property'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: property
+    });
+  } catch (error) {
+    console.error('Error fetching sales property:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch sales property',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+```
+
+## Key Changes Made:
+
+1. **Added agency filtering**: All queries now include `agencyId: agent.agencyId` in the where clause
+2. **Removed `agentId` parameter**: Agents can only see properties from their own agency, not filter by specific agents
+3. **Removed `agencyId` parameter**: Agents can't query other agencies' properties
+4. **Security**: Each agent can only access properties from their own agency
+5. **Error handling**: Added proper error messages when agent or property is not found
+6. **Consistent filtering**: Applied same logic to both rental and sales properties
+
+## How it works now:
+
+1. **Authenticated agent** accesses `/api/properties/rental` or `/api/properties/sales`
+2. **System automatically** filters properties by the agent's `agencyId`
+3. **Agent only sees** properties from their own agency
+4. **Public API endpoints** remain unchanged - they show published properties from any agency
+
+## Benefits:
+- **Security**: Agents can't access other agencies' properties
+- **Data isolation**: Each agency only sees their own data
+- **Simplified queries**: No need for complex permission checks
+- **Performance**: Queries are filtered at database level
+
+This ensures that each agent can only manage properties that belong to their agency, maintaining proper data isolation between different real estate agencies using your platform.

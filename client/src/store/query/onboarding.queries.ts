@@ -14,9 +14,21 @@ export const useVerifyOtp = () => {
   const dispatch = useDispatch();
   return useMutation<{ agent: Agent; token: string }, Error, { email: string; otp: string }>({
     mutationFn: verifyOtp,
-    onSuccess: (data) => {
-      dispatch(setAgent(data.agent));
-      localStorage.setItem('token', data.token);
+    onSuccess: (data: any) => {
+      localStorage.setItem("token", data.token);
+      let agentData = {
+        id: data.agent.id,
+        email: data.agent.email,
+        name: data.agent.name,
+        emailVerified: data.agent.emailVerified,
+        onboardingStep: data.agent.onboardingStep,
+        agency: data.agent.agency,
+        color: data.agent.agency?.primaryColor,
+        agencyPhone: data.agent.agency?.phone,
+        location: data.agent.agency?.locations,
+      }
+      console.log("Login successful:", agentData);
+      dispatch(setAgent(agentData));
     },
   });
 };

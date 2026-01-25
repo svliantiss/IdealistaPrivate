@@ -632,3 +632,360 @@ export const useUpdateSalesPropertyStatus = () => {
     },
   });
 };
+
+
+
+// Add these to the existing imports
+// ...
+
+// Public API base URL (different from admin API)
+const PUBLIC_API_BASE_URL = 'http://localhost:3003/api/general';
+
+// Add these types for public API
+export interface PublicRentalProperty {
+  id: number;
+  title: string;
+  description: string | null;
+  location: string;
+  propertyType: string;
+  price: number;
+  priceType: string;
+  beds: number;
+  baths: number;
+  sqm: number;
+  minimumStayValue: number;
+  minimumStayUnit: string;
+  classification: string | null;
+  amenities: string[];
+  nearestTo: string[];
+  media: Array<{
+    url: string;
+    type: 'image' | 'video';
+    title: string;
+  }>;
+  status: string;
+  licenseNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  agency: {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    primaryColor: string | null;
+    secondaryColor: string | null;
+    logo: string | null;
+  };
+  agent: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+  };
+  availability: Array<{
+    startDate: Date;
+    endDate: Date;
+    isAvailable: boolean;
+  }>;
+}
+
+export interface PublicSalesProperty {
+  id: number;
+  title: string;
+  description: string | null;
+  location: string;
+  propertyType: string;
+  price: number;
+  beds: number;
+  baths: number;
+  sqm: number;
+  amenities: string[];
+  nearestTo: string[];
+  media: Array<{
+    url: string;
+    type: 'image' | 'video';
+    title: string;
+  }>;
+  status: string;
+  licenseNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  agency: {
+    id: number;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    primaryColor: string | null;
+    secondaryColor: string | null;
+    logo: string | null;
+  };
+  agent: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+  } | null;
+  pricePerSqm: string;
+  mortgage: {
+    downPayment: string;
+    loanAmount: string;
+    monthlyPayment: string;
+  };
+}
+
+export interface PublicRentalPropertyList {
+  id: number;
+  title: string;
+  location: string;
+  propertyType: string;
+  price: number;
+  priceType: string;
+  beds: number;
+  baths: number;
+  sqm: number;
+  thumbnail: string | null;
+  agency: {
+    id: number;
+    name: string;
+    phone: string | null;
+    logo: string | null;
+  };
+}
+
+export interface PublicSalesPropertyList {
+  id: number;
+  title: string;
+  location: string;
+  propertyType: string;
+  price: number;
+  pricePerSqm: string;
+  beds: number;
+  baths: number;
+  sqm: number;
+  thumbnail: string | null;
+  agency: {
+    id: number;
+    name: string;
+    phone: string | null;
+    logo: string | null;
+  };
+  agent: {
+    name: string;
+    phone: string | null;
+  };
+  status: string;
+}
+
+// Public API functions (no auth required)
+const fetchPublicAPI = async (url: string, options?: RequestInit) => {
+  console.log('📡 [fetchPublicAPI] Making request to:', url);
+
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  });
+
+  console.log('📡 [fetchPublicAPI] Response status:', response.status);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Network response was not ok' }));
+    console.error('❌ [fetchPublicAPI] Request failed:', error);
+    throw new Error(error.error || error.message || 'Request failed');
+  }
+
+  const data = await response.json();
+  console.log('✅ [fetchPublicAPI] Request successful');
+  return data;
+};
+
+// ==========================
+// PUBLIC RENTAL PROPERTY QUERIES
+// ==========================
+
+/**
+ * Get a single rental property for public display
+ */
+export const usePublicRentalProperty = (id: number) => {
+  console.log('🔧 [usePublicRentalProperty] Fetching public rental property with ID:', id);
+
+  return useQuery({
+    queryKey: ['public', 'rentals', id],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(`${PUBLIC_API_BASE_URL}/rentals/${id}`);
+      return response.data as PublicRentalProperty;
+    },
+    enabled: !!id,
+    retry: 2,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
+
+/**
+ * Get list of rental properties for public display with filters
+ */
+export const usePublicRentalProperties = (filters?: {
+  page?: number;
+  limit?: number;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBeds?: number;
+  minBaths?: number;
+  propertyType?: string;
+  amenities?: string;
+}) => {
+  const queryParams = new URLSearchParams();
+
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+  }
+
+  const url = `${PUBLIC_API_BASE_URL}/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  console.log('🔧 [usePublicRentalProperties] Fetching public rentals with filters:', filters);
+  console.log('🔧 [usePublicRentalProperties] URL:', url);
+
+  return useQuery({
+    queryKey: ['public', 'rentals', filters],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(url);
+      return {
+        data: response.data as PublicRentalPropertyList[],
+        pagination: response.pagination
+      };
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+/**
+ * Get similar rental properties
+ */
+export const usePublicSimilarRentalProperties = (propertyId: number) => {
+  console.log('🔧 [usePublicSimilarRentalProperties] Fetching similar rentals for property:', propertyId);
+
+  return useQuery({
+    queryKey: ['public', 'rentals', 'similar', propertyId],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(`${PUBLIC_API_BASE_URL}/rentals/${propertyId}/similar`);
+      return response.data as PublicRentalPropertyList[];
+    },
+    enabled: !!propertyId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+// ==========================
+// PUBLIC SALES PROPERTY QUERIES
+// ==========================
+
+/**
+ * Get a single sales property for public display
+ */
+export const usePublicSalesProperty = (id: number) => {
+  console.log('🔧 [usePublicSalesProperty] Fetching public sales property with ID:', id);
+
+  return useQuery({
+    queryKey: ['public', 'sales', id],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(`${PUBLIC_API_BASE_URL}/sales/${id}`);
+      return response.data as PublicSalesProperty;
+    },
+    enabled: !!id,
+    retry: 2,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
+
+/**
+ * Get list of sales properties for public display with filters
+ */
+export const usePublicSalesProperties = (filters?: {
+  page?: number;
+  limit?: number;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minBeds?: number;
+  minBaths?: number;
+  propertyType?: string;
+  minSqm?: number;
+  maxSqm?: number;
+}) => {
+  const queryParams = new URLSearchParams();
+
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+  }
+
+  const url = `${PUBLIC_API_BASE_URL}/sales${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  console.log('🔧 [usePublicSalesProperties] Fetching public sales with filters:', filters);
+  console.log('🔧 [usePublicSalesProperties] URL:', url);
+
+  return useQuery({
+    queryKey: ['public', 'sales', filters],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(url);
+      return {
+        data: response.data as PublicSalesPropertyList[],
+        pagination: response.pagination
+      };
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+/**
+ * Get similar sales properties
+ */
+export const usePublicSimilarSalesProperties = (propertyId: number) => {
+  console.log('🔧 [usePublicSimilarSalesProperties] Fetching similar sales for property:', propertyId);
+
+  return useQuery({
+    queryKey: ['public', 'sales', 'similar', propertyId],
+    queryFn: async () => {
+      const response = await fetchPublicAPI(`${PUBLIC_API_BASE_URL}/sales/${propertyId}/similar`);
+      return response.data as PublicSalesPropertyList[];
+    },
+    enabled: !!propertyId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+// ==========================
+// PUBLIC API HEALTH CHECK
+// ==========================
+
+/**
+ * Check if public API is available
+ */
+export const usePublicApiHealth = () => {
+  console.log('🔧 [usePublicApiHealth] Checking public API health');
+
+  return useQuery({
+    queryKey: ['public', 'health'],
+    queryFn: () => fetchPublicAPI(`${PUBLIC_API_BASE_URL.replace('/public', '')}/health`),
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 1000 * 60, // 1 minute
+  });
+};
+
+// ==========================
+// EXPORT ALL QUERIES
+// ==========================
+

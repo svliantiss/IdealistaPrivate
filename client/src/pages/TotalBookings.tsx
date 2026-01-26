@@ -97,6 +97,7 @@ export default function TotalBookings() {
                   <TableCell className="font-medium" data-testid={`text-property-${booking.id}`}>
                     {getPropertyTitle(booking.propertyId)}
                   </TableCell>
+                  
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm" data-testid={`text-client-${booking.id}`}>

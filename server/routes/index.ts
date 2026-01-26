@@ -6,7 +6,7 @@ import uploadRoutes from "./storage";
 import profileRoutes from "./profile";
 import propertyRoutes from "./properties";
 import publicApiRoutes from "./public";
-
+import searchProperty from "./search"
 import onboardingRoutes from "./onboarding";
 import { verifyAuthTokenController } from "server/controllers/authController";
 
@@ -18,6 +18,7 @@ export async function registerRoutes(server: Server, app: Express) {
   app.use("/api/general", publicApiRoutes);
   app.use("/api/properties", propertyRoutes);
   app.use("/api", uploadRoutes);
+  app.use("/api/search", searchProperty);
   app.get("/api/auth/me", verifyAuthTokenController);
   console.log("✅ Routes registered");
 

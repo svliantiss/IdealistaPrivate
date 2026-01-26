@@ -6,13 +6,194 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SalesListing } from "./Public/SalesProperties";
 import { Textarea } from "@/components/ui/textarea";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText, Euro, Building2, Home, Tag, Layers, CalendarDays, Clock } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText, Euro, Building2, Home, Tag, Layers, CalendarDays, Clock, Play, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
 import { AgentContactDialog } from "@/components/AgentContactDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSalesProperty } from "./../store/query/property.queries";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useReactToPrint } from "react-to-print";
+
+// Video Player Component
+const VideoPlayer = ({ src, title }: { src: string; title: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      <video
+        ref={videoRef}
+        src={src}
+        className="w-full h-full object-cover"
+        controls
+        preload="metadata"
+        poster="/video-poster.jpg"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      >
+        <source src={src} type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      {!isPlaying && (
+        <button
+          onClick={handlePlayPause}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+        >
+          <div className="bg-secondary/80 hover:bg-secondary p-4 rounded-full">
+            <Play className="h-8 w-8 text-white" />
+          </div>
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Media Slider Component
+const MediaSlider = ({ media }: { media: Array<{ url: string; type: string; title?: string }> }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!media || media.length === 0) {
+    return (
+      <div className="aspect-[16/9] rounded-lg overflow-hidden bg-muted">
+        <div className="w-full h-full flex items-center justify-center">
+          <p className="text-muted-foreground">No media available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const goToPrevious = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === 0 ? media.length - 1 : prevIndex - 1
+    );
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === media.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  const currentMedia = media[currentIndex];
+
+  return (
+    <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
+      {/* Main Media Display */}
+      <div className="w-full h-full">
+        {currentMedia.type === 'video' ? (
+          <VideoPlayer src={currentMedia.url} title={currentMedia.title || 'Property Video'} />
+        ) : (
+          <img
+            src={currentMedia.url}
+            alt={currentMedia.title || 'Property Image'}
+            className="w-full h-full object-cover"
+            crossOrigin="anonymous"
+          />
+        )}
+      </div>
+
+      {/* Navigation Arrows */}
+      {media.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </>
+      )}
+
+      {/* Media Type Indicator */}
+      <div className="absolute top-4 right-4">
+        <Badge className="bg-black/70 text-white backdrop-blur-sm">
+          {currentMedia.type === 'video' ? 'Video' : 'Image'} {currentIndex + 1}/{media.length}
+        </Badge>
+      </div>
+
+      {/* Thumbnail Navigation */}
+      {media.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          {media.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-2 h-2 rounded-full transition-all ${index === currentIndex
+                  ? 'bg-secondary w-6'
+                  : 'bg-white/60 hover:bg-white'
+                }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Thumbnails Preview */}
+      {media.length > 1 && (
+        <div className="absolute bottom-4 left-4 flex gap-2">
+          {media.slice(0, 4).map((item, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-16 h-12 rounded overflow-hidden border-2 transition-all ${index === currentIndex
+                  ? 'border-secondary'
+                  : 'border-transparent hover:border-white/50'
+                }`}
+            >
+              {item.type === 'video' ? (
+                <div className="w-full h-full bg-black/50 flex items-center justify-center">
+                  <Play className="h-4 w-4 text-white" />
+                </div>
+              ) : (
+                <img
+                  src={item.url}
+                  alt={`Thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              )}
+            </button>
+          ))}
+          {media.length > 4 && (
+            <div className="w-16 h-12 rounded bg-black/50 flex items-center justify-center text-white text-sm">
+              +{media.length - 4}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function SalesPropertyDetails() {
   const params = useParams<{ id: string }>();
@@ -26,6 +207,18 @@ export default function SalesPropertyDetails() {
   const [timeline, setTimeline] = useState("");
   const [financing, setFinancing] = useState<boolean>(false);
   const { toast } = useToast();
+  const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  /** IMPORTANT: ref must exist BEFORE printing */
+  const printRef = useRef<HTMLDivElement>(null);
+
+  /** FIX: use contentRef (NOT content()) */
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `sales-property-${propertyId}`,
+    removeAfterPrint: true,
+  });
 
   // Use TanStack Query hook for sales property
   const {
@@ -47,15 +240,12 @@ export default function SalesPropertyDetails() {
       return;
     }
 
-    // Here you would normally send the inquiry to your backend
-    // For now, we'll just show a success message
     toast({
       title: "Inquiry Sent!",
       description: "Your inquiry has been sent to the agent. They will contact you soon.",
       variant: "default",
     });
 
-    // Reset form and close dialog
     setClientName("");
     setClientEmail("");
     setClientPhone("");
@@ -64,6 +254,65 @@ export default function SalesPropertyDetails() {
     setTimeline("");
     setFinancing(false);
     setInquiryDialogOpen(false);
+  };
+
+  const handleSharePublicLink = () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({
+        title: property?.title || 'Property Listing',
+        text: `Check out this property: ${property?.title}`,
+        url: url,
+      });
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        toast({
+          title: "Link copied!",
+          description: "Property link has been copied to clipboard.",
+        });
+      }).catch(() => {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        toast({
+          title: "Link copied!",
+          description: "Property link has been copied to clipboard.",
+        });
+      });
+    }
+    setShareDropdownOpen(false);
+  };
+
+  /** FIX: small delay avoids ref timing race */
+  const handleDownloadPDF = () => {
+    if (!property) {
+      toast({
+        title: "Error",
+        description: "Property not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShareDropdownOpen(false);
+    setIsGeneratingPDF(true);
+
+    toast({
+      title: "Generating PDF...",
+      description: "Please wait while we prepare your document.",
+    });
+
+    setTimeout(() => {
+      handlePrint();
+      setIsGeneratingPDF(false);
+      toast({
+        title: "PDF downloaded!",
+        description: "Property details have been saved as PDF.",
+      });
+    }, 100);
   };
 
   if (propertyLoading) {
@@ -95,15 +344,67 @@ export default function SalesPropertyDetails() {
     );
   }
 
-  // Get property image
-  const getPropertyImage = () => {
-    if (property.media && property.media.length > 0) {
-      return property.media[0].url;
+  // Get all media items (images and videos)
+  const getMediaItems = () => {
+    const mediaItems: Array<{ url: string; type: string; title?: string }> = [];
+
+    // Check property.media array first (assuming it has type property)
+    if (property.media && Array.isArray(property.media)) {
+      property.media.forEach((item: any) => {
+        if (item.url) {
+          const url = item.url.toLowerCase();
+          const type = url.match(/\.(mp4|webm|ogg|mov|avi)$/) ? 'video' : 'image';
+          mediaItems.push({
+            url: item.url,
+            type: item.type || type,
+            title: item.title || item.description
+          });
+        }
+      });
     }
-    if (property.images && property.images.length > 0) {
-      return property.images[0];
+
+    // Also check property.images array for backward compatibility
+    if (property.images && Array.isArray(property.images)) {
+      property.images.forEach((url: string) => {
+        if (url) {
+          mediaItems.push({
+            url,
+            type: 'image',
+            title: 'Property Image'
+          });
+        }
+      });
     }
-    return '/placeholder.jpg';
+
+    // Check for videos property if exists
+    if (property.videos && Array.isArray(property.videos)) {
+      property.videos.forEach((video: string | any) => {
+        if (typeof video === 'string') {
+          mediaItems.push({
+            url: video,
+            type: 'video',
+            title: 'Property Video'
+          });
+        } else if (video && video.url) {
+          mediaItems.push({
+            url: video.url,
+            type: 'video',
+            title: video.title || 'Property Video'
+          });
+        }
+      });
+    }
+
+    // If no media found, use placeholder
+    if (mediaItems.length === 0) {
+      mediaItems.push({
+        url: '/placeholder.jpg',
+        type: 'image',
+        title: 'Property Image'
+      });
+    }
+
+    return mediaItems;
   };
 
   // Format price
@@ -115,7 +416,7 @@ export default function SalesPropertyDetails() {
   // Calculate price per square meter
   const calculatePricePerSqm = () => {
     const price = typeof property.price === 'string' ? parseFloat(property.price) : property.price;
-    const sqm = property.sqm || 1; // Avoid division by zero
+    const sqm = property.sqm || 1;
     const pricePerSqm = price / sqm;
     return `€${pricePerSqm.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m²`;
   };
@@ -124,10 +425,10 @@ export default function SalesPropertyDetails() {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -144,8 +445,25 @@ export default function SalesPropertyDetails() {
     return icons[type] || <Home className="h-4 w-4" />;
   };
 
+  const mediaItems = getMediaItems();
+
   return (
     <Layout>
+      {/* ================= PRINTABLE CONTENT (MUST BE MOUNTED) ================= */}
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+      >
+        <div ref={printRef}>
+          <SalesListing prop_id={property.id} />
+        </div>
+      </div>
+
       <div className="p-8 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -156,11 +474,11 @@ export default function SalesPropertyDetails() {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-serif font-bold text-primary" data-testid="text-property-title">{property.title}</h1>
+              <h1 className="text-3xl font-serif font-bold text-secondary" data-testid="text-property-title">{property.title}</h1>
               <Badge className={`
-                ${property.status === 'published' ? 'bg-green-500' : 
-                  property.status === 'draft' ? 'bg-blue-500' : 
-                  'bg-gray-500'
+                ${property.status === 'published' ? 'bg-green-500' :
+                  property.status === 'draft' ? 'bg-blue-500' :
+                    'bg-gray-500'
                 } text-white capitalize
               `}>
                 {property.status}
@@ -177,9 +495,40 @@ export default function SalesPropertyDetails() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon">
-              <Share2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu open={shareDropdownOpen} onOpenChange={setShareDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" disabled={isGeneratingPDF}>
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={handleSharePublicLink}
+                  className="cursor-pointer"
+                  disabled={isGeneratingPDF}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  <span>Share Public Link</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDownloadPDF}
+                  className="cursor-pointer"
+                  disabled={isGeneratingPDF}
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Generating PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Download PDF</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="icon">
               <Heart className="h-4 w-4" />
             </Button>
@@ -189,30 +538,8 @@ export default function SalesPropertyDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Property Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Main Image */}
-            <div className="aspect-[16/9] rounded-lg overflow-hidden">
-              <img
-                src={getPropertyImage()}
-                alt={property.title}
-                className="w-full h-full object-cover"
-                data-testid="img-property-main"
-              />
-            </div>
-
-            {/* Additional Images Gallery */}
-            {property.media && property.media.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {property.media.slice(1, 5).map((media: any, index: number) => (
-                  <div key={index} className="aspect-square rounded-md overflow-hidden">
-                    <img
-                      src={media.url}
-                      alt={`${property.title} - Image ${index + 2}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Media Slider Component */}
+            <MediaSlider media={mediaItems} />
 
             {/* Property Description */}
             <Card>
@@ -232,17 +559,17 @@ export default function SalesPropertyDetails() {
                     <p className="text-sm text-muted-foreground">Property Type</p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <Bed className="h-6 w-6 mx-auto text-primary mb-2" />
+                    <Bed className="h-6 w-6 mx-auto text-secondary mb-2" />
                     <p className="text-2xl font-bold" data-testid="text-beds">{property.beds || 0}</p>
                     <p className="text-sm text-muted-foreground">Bedrooms</p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <Bath className="h-6 w-6 mx-auto text-primary mb-2" />
+                    <Bath className="h-6 w-6 mx-auto text-secondary mb-2" />
                     <p className="text-2xl font-bold" data-testid="text-baths">{property.baths || 0}</p>
                     <p className="text-sm text-muted-foreground">Bathrooms</p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <Maximize2 className="h-6 w-6 mx-auto text-primary mb-2" />
+                    <Maximize2 className="h-6 w-6 mx-auto text-secondary mb-2" />
                     <p className="text-2xl font-bold" data-testid="text-sqm">{property.sqm || 0}</p>
                     <p className="text-sm text-muted-foreground">Square Meters</p>
                   </div>
@@ -336,7 +663,6 @@ export default function SalesPropertyDetails() {
                       <Badge variant="outline">{property.licenseNumber}</Badge>
                     </div>
                   )}
-                  {/* Add more document sections as needed */}
                   <div className="text-sm text-muted-foreground italic">
                     Additional property documents available upon request. Contact the agent for more information.
                   </div>
@@ -352,7 +678,7 @@ export default function SalesPropertyDetails() {
               <CardHeader>
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-primary" data-testid="text-price">{formatPrice()}</span>
+                    <span className="text-3xl font-bold text-secondary" data-testid="text-price">{formatPrice()}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {property.sqm ? `${property.sqm} m² • ${calculatePricePerSqm()}` : 'Price negotiable'}
@@ -422,7 +748,7 @@ export default function SalesPropertyDetails() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-bold">
                         {property.createdBy?.name?.charAt(0) || property.agency.name?.charAt(0) || 'A'}
                       </div>
                       <div>
@@ -434,7 +760,7 @@ export default function SalesPropertyDetails() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       {property.createdBy?.email && (
                         <div className="flex items-center gap-2 text-sm">
@@ -522,7 +848,7 @@ export default function SalesPropertyDetails() {
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <h4 className="font-semibold">{property.title}</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-primary">{formatPrice()}</span>
+                <span className="text-2xl font-bold text-secondary">{formatPrice()}</span>
                 <span className="text-sm text-muted-foreground">
                   {property.sqm && `${property.sqm} m²`}
                 </span>

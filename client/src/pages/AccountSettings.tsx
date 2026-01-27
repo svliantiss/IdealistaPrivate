@@ -24,9 +24,7 @@ import {
   Palette,
   Upload,
   Bell,
-  Lock,
   Eye,
-  Shield,
   X
 } from "lucide-react";
 import { toast } from "sonner";
@@ -64,7 +62,6 @@ export default function AccountSettings() {
     emailNotifications: true,
     bookingAlerts: true,
     marketingEmails: false,
-    twoFactorAuth: false,
     publicProfile: true,
   });
 
@@ -409,56 +406,6 @@ export default function AccountSettings() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-serif">Change Password</CardTitle>
-                <CardDescription>Update your account password</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="currentPassword"
-                      type="password"
-                      placeholder="Enter current password"
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      placeholder="Enter new password"
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm new password"
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <Button>Update Password</Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Settings Tab */}
@@ -528,23 +475,6 @@ export default function AccountSettings() {
                 <CardDescription>Manage your security preferences</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor="twoFactorAuth" className="font-medium">Two-Factor Authentication</Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                  <Switch
-                    id="twoFactorAuth"
-                    checked={settings.twoFactorAuth}
-                    onCheckedChange={(checked) => updateSettings("twoFactorAuth", checked)}
-                  />
-                </div>
-
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">

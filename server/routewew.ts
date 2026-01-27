@@ -20,13 +20,7 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-// Admin password - REQUIRED for security
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-// Log warning if ADMIN_PASSWORD is not set
-if (!ADMIN_PASSWORD) {
-  console.error('WARNING: ADMIN_PASSWORD environment variable is not set. Admin panel will be inaccessible.');
-}
+// Admin authentication will be implemented with OTP
 
 export async function registerRoutes(
   httpServer: Server,
@@ -370,21 +364,12 @@ export async function registerRoutes(
 
   // ===== ADMIN ROUTES =====
   
-  // Admin login
+  // Admin login - OTP authentication to be implemented
   app.post("/api/admin/login", (req, res) => {
-    if (!ADMIN_PASSWORD) {
-      return res.status(503).json({ 
-        success: false, 
-        message: "Admin panel is not configured. Please set ADMIN_PASSWORD environment variable." 
-      });
-    }
-    const { password } = req.body;
-    if (password === ADMIN_PASSWORD) {
-      req.session.isAdmin = true;
-      res.json({ success: true, message: "Login successful" });
-    } else {
-      res.status(401).json({ success: false, message: "Invalid password" });
-    }
+    res.status(501).json({ 
+      success: false, 
+      message: "Admin login with OTP authentication is not yet implemented." 
+    });
   });
 
   // Admin logout

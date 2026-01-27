@@ -20,7 +20,7 @@ RentNetAgents is a private professional network designed for real estate agents 
 - Agency Contact Info fields and dialog
 
 ### Earlier Session: Admin Panel & Sales Features
-- Admin Authentication System with password protection (ADMIN_PASSWORD env var)
+- Admin Authentication System (OTP-based authentication to be implemented)
 - Admin Panel at `/admin` for managing agents
 - Sales Properties System with separate commission structure (4% total, split 48/48/4)
 
@@ -127,7 +127,8 @@ The application uses nine core entities (four for rentals, four for sales, one f
 **Session-Based Authentication**
 - Admin access controlled via express-session with MemoryStore
 - Session cookies with httpOnly, sameSite, and secure flags (in production)
-- Single admin password (ADMIN_PASSWORD environment variable required)
+- OTP-based authentication for users (email OTP service)
+- Admin authentication with OTP to be implemented
 - No per-agent authentication currently implemented (uses hardcoded CURRENT_AGENT_ID = 1)
 - **Rationale**: Simple initial implementation for admin panel; agent authentication can be added later
 - **Trade-off**: MemoryStore sessions are lost on server restart; consider PostgreSQL session store (connect-pg-simple already installed) for production
@@ -186,7 +187,7 @@ The application uses nine core entities (four for rentals, four for sales, one f
   - MemoryStore for development (sessions cleared on restart)
   - connect-pg-simple available for PostgreSQL-backed sessions in production
   - Required: `SESSION_SECRET` environment variable (critical for production)
-  - Required: `ADMIN_PASSWORD` environment variable for admin access
+  - OTP-based authentication via email service (Resend API)
 
 ### UI & Styling
 - **Radix UI** - Headless component primitives (@radix-ui/react-*)

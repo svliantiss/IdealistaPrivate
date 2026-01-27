@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 const SALT_ROUNDS = 10;
 
 /**
- * Hash a string (OTP, password, etc.)
+ * Hash a string (OTP, etc.)
  * @param value string to hash
  * @returns hashed string
  */

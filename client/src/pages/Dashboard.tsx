@@ -39,8 +39,10 @@ export default function Dashboard() {
 
 
   // Calculate active listings (rental + sales)
-  const activeRentalListings = properties.filter((p: any) => p.status === 'active').length;
-  const activeSalesListings = salesProperties.filter((p: any) => p.status === 'active').length;
+  // For rentals: published status means active (not draft, not archived)
+  // For sales: not sold and not archived means active
+  const activeRentalListings = properties.filter((p: any) => p.status === 'published').length;
+  const activeSalesListings = salesProperties.filter((p: any) => p.status !== 'sold' && p.status !== 'archived').length;
   const activeListings = activeRentalListings + activeSalesListings;
   
   // Filter bookings relevant to current agent (as owner or booking agent)

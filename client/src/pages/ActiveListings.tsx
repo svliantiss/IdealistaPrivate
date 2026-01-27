@@ -21,8 +21,10 @@ export default function ActiveListings() {
   });
 
   const isLoading = rentalLoading || salesLoading;
-  const activeRentals = properties.filter((p: any) => p.status === 'active').slice(0, 3);
-  const activeSales = salesProperties.filter((p: any) => p.status !== 'sold').slice(0, 3);
+  // For rentals: published status means active (not draft, not archived)
+  // For sales: not sold and not archived means active
+  const activeRentals = properties.filter((p: any) => p.status === 'published').slice(0, 3);
+  const activeSales = salesProperties.filter((p: any) => p.status !== 'sold' && p.status !== 'archived').slice(0, 3);
 
   if (isLoading) {
     return (

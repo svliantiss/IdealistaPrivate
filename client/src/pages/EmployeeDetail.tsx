@@ -50,8 +50,10 @@ export default function EmployeeDetail() {
     );
   }
 
-  const activeRentals = properties.filter((p: any) => p.status === 'active');
-  const activeSales = salesProperties.filter((p: any) => p.status !== 'sold');
+  // For rentals: published status means active (not draft, not archived)
+  // For sales: not sold and not archived means active
+  const activeRentals = properties.filter((p: any) => p.status === 'published');
+  const activeSales = salesProperties.filter((p: any) => p.status !== 'sold' && p.status !== 'archived');
   
   // Filter out commissions for cancelled bookings
   const activeCommissions = commissions.filter((c: any) => {

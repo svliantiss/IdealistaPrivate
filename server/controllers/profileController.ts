@@ -22,6 +22,7 @@ export const getProfileController = async (req: Request, res: Response) => {
             id: true,
             name: true,
             primaryColor: true,
+            secondaryColor: true,
             logo: true,
             phone: true,
             email: true,
@@ -56,6 +57,7 @@ export const updateProfileController = async (req: Request, res: Response) => {
       // agency fields
       agencyName,
       color,
+      secondaryColor,
       logo,
       agencyPhone,
       agencyEmail,
@@ -87,6 +89,7 @@ export const updateProfileController = async (req: Request, res: Response) => {
         data: {
           name: agencyName,
           primaryColor: color,
+          secondaryColor: secondaryColor,
           locations,
           logo,
           phone: agencyPhone,

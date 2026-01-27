@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -17,7 +18,9 @@ import {
   Mail,
   MapPin,
   Globe,
-  Phone
+  Phone,
+  UserPlus,
+  Users
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -28,6 +31,13 @@ import { uploadToR2 } from "@/lib/utils";
 import { useProfile, useUpdateProfile } from "@/store/api/profileApi";
 
 
+interface AgentInvite {
+  id: string;
+  name: string;
+  email: string;
+  role: "AGENT" | "MANAGER";
+}
+
 interface OnboardingData {
   adminName: string;
   adminEmail: string;
@@ -35,14 +45,16 @@ interface OnboardingData {
   agencyName: string;
   agencyLogo: File | null;
   agencyColor: string;
+  agencySecondaryColor: string;
   agencyWebsite: string;
   agencyPhone: string;
   locations: string[];
+  invites: AgentInvite[];
   acceptsTerms: boolean;
   acceptsPrivacy: boolean;
 }
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export default function Onboarding() {
   const updateProfile = useUpdateProfile();
@@ -51,6 +63,11 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
   const [locationInput, setLocationInput] = useState("");
+  
+  // Step 5 - Invite agents
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"AGENT" | "MANAGER">("AGENT");
 
   const [formData, setFormData] = useState<OnboardingData>({
     adminName: "",
@@ -59,9 +76,11 @@ export default function Onboarding() {
     agencyName: "",
     agencyLogo: null,
     agencyColor: "#0f172a",
+    agencySecondaryColor: "#10b981",
     agencyWebsite: "",
     agencyPhone: "",
     locations: [],
+    invites: [],
     acceptsTerms: false,
     acceptsPrivacy: false
   });
@@ -144,7 +163,10 @@ export default function Onboarding() {
 
       console.log("💾 [Step3] Updating branding via mutation...");
       await updateBrandingMutation.mutateAsync({
-        agencyName: formData.agencyName, agencyColor: formData.agencyColor, agencyLogo: logoUrl, // include in case backend wants logo
+        agencyName: formData.agencyName,
+        agencyColor: formData.agencyColor,
+        agencySecondaryColor: formData.agencySecondaryColor,
+        agencyLogo: logoUrl, // include in case backend wants logo
       });
       console.log("✅ [Step3] Branding updated successfully");
       nextStep();
@@ -177,23 +199,121 @@ export default function Onboarding() {
     try {
       console.log("Submitting contact info:", { formData });
       await updateContactMutation.mutateAsync({ agencyPhone: formData.agencyPhone, website: formData.agencyWebsite, locations: formData.locations });
+      toast.success("Contact information saved!");
+      nextStep();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save contact information");
+    }
+    setLoading(false);
+  };
 
+  const handleStep5Submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // TODO: Send invites to backend
+      console.log("Sending invites:", formData.invites);
       toast.success("Agency account created successfully!");
       setLocation("/dashboard");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create agency account");
+      toast.error("Failed to complete setup");
     }
     setLoading(false);
-
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Extract dominant colors from an image
+  const extractColorsFromImage = (file: File): Promise<{ primary: string; secondary: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Could not get canvas context"));
+            return;
+          }
+
+          // Scale down image for faster processing
+          const maxSize = 100;
+          const scale = Math.min(maxSize / img.width, maxSize / img.height);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Get image data
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const pixels = imageData.data;
+          
+          // Count color occurrences (simplified bucketing)
+          const colorCounts: { [key: string]: number } = {};
+          
+          for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+            
+            // Skip transparent or nearly white/black pixels
+            if (a < 125 || (r > 240 && g > 240 && b > 240) || (r < 15 && g < 15 && b < 15)) {
+              continue;
+            }
+            
+            // Bucket colors to reduce variance
+            const bucketedR = Math.floor(r / 32) * 32;
+            const bucketedG = Math.floor(g / 32) * 32;
+            const bucketedB = Math.floor(b / 32) * 32;
+            
+            const colorKey = `${bucketedR},${bucketedG},${bucketedB}`;
+            colorCounts[colorKey] = (colorCounts[colorKey] || 0) + 1;
+          }
+          
+          // Sort by frequency
+          const sortedColors = Object.entries(colorCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([color]) => {
+              const [r, g, b] = color.split(",").map(Number);
+              return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+            });
+          
+          // Get primary and secondary colors
+          const primary = sortedColors[0] || "#0f172a";
+          const secondary = sortedColors[1] || "#10b981";
+          
+          resolve({ primary, secondary });
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) return toast.error("Logo must be <2MB");
     if (!file.type.startsWith("image/")) return toast.error("Please upload an image file");
+    
     updateData("agencyLogo", file);
+    
+    // Extract colors from the image
+    try {
+      toast.info("Extracting brand colors from logo...");
+      const { primary, secondary } = await extractColorsFromImage(file);
+      updateData("agencyColor", primary);
+      updateData("agencySecondaryColor", secondary);
+      toast.success("Brand colors extracted successfully!");
+    } catch (error) {
+      console.error("Failed to extract colors:", error);
+      toast.warning("Colors extracted, but you can adjust them manually");
+    }
   };
 
   const addLocation = () => {
@@ -205,6 +325,38 @@ export default function Onboarding() {
 
   const removeLocation = (loc: string) => {
     updateData("locations", formData.locations.filter(l => l !== loc));
+  };
+
+  const addInvite = () => {
+    if (!inviteName.trim()) {
+      toast.error("Please enter agent name");
+      return;
+    }
+    if (!inviteEmail.trim()) {
+      toast.error("Please enter agent email");
+      return;
+    }
+    if (formData.invites.some(inv => inv.email === inviteEmail.trim())) {
+      toast.error("This email has already been invited");
+      return;
+    }
+    
+    const newInvite: AgentInvite = {
+      id: Date.now().toString(),
+      name: inviteName.trim(),
+      email: inviteEmail.trim(),
+      role: inviteRole,
+    };
+    
+    updateData("invites", [...formData.invites, newInvite]);
+    setInviteName("");
+    setInviteEmail("");
+    setInviteRole("AGENT");
+    toast.success(`Invite added for ${newInvite.name}`);
+  };
+
+  const removeInvite = (id: string) => {
+    updateData("invites", formData.invites.filter(inv => inv.id !== id));
   };
 
   const progress = (step / TOTAL_STEPS) * 100;
@@ -366,28 +518,58 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="agencyColor">Brand Color</Label>
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    <div
-                      className="h-20 w-20 rounded-lg border-2 border-border"
-                      style={{ backgroundColor: formData.agencyColor }}
-                    />
+              <div className="space-y-3">
+                <Label>Brand Colors</Label>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Primary Color */}
+                  <div className="space-y-3">
+                    <Label htmlFor="agencyColor" className="text-sm font-medium">Primary</Label>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-14 w-14 rounded-lg border-2 border-border shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: formData.agencyColor }}
+                      />
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          id="agencyColor"
+                          type="color"
+                          value={formData.agencyColor}
+                          onChange={(e) => updateData("agencyColor", e.target.value)}
+                          className="h-10 cursor-pointer w-full"
+                        />
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {formData.agencyColor.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <Input
-                      id="agencyColor"
-                      type="color"
-                      value={formData.agencyColor}
-                      onChange={(e) => updateData("agencyColor", e.target.value)}
-                      className="h-12 cursor-pointer"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Current: {formData.agencyColor}
-                    </p>
+                  
+                  {/* Secondary Color */}
+                  <div className="space-y-3">
+                    <Label htmlFor="agencySecondaryColor" className="text-sm font-medium">Secondary</Label>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-14 w-14 rounded-lg border-2 border-border shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: formData.agencySecondaryColor }}
+                      />
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          id="agencySecondaryColor"
+                          type="color"
+                          value={formData.agencySecondaryColor}
+                          onChange={(e) => updateData("agencySecondaryColor", e.target.value)}
+                          className="h-10 cursor-pointer w-full"
+                        />
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {formData.agencySecondaryColor.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground italic">
+                  Colors are automatically extracted from your logo. You can adjust them manually.
+                </p>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
@@ -524,7 +706,144 @@ export default function Onboarding() {
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Creating Account..." : (
+                {loading ? "Saving..." : (
+                  <>
+                    Continue <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+
+        {step === 5 && (
+          <form onSubmit={handleStep5Submit}>
+            <CardHeader>
+              <CardTitle className="text-2xl font-serif">Invite Your Team</CardTitle>
+              <CardDescription>Invite other agents to join your agency (optional)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="inviteName">Agent Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="inviteName"
+                      placeholder="John Smith"
+                      className="pl-9"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="inviteEmail">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="inviteEmail"
+                      type="email"
+                      placeholder="john@agency.com"
+                      className="pl-9"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="inviteRole">Role</Label>
+                  <Select value={inviteRole} onValueChange={(value: "AGENT" | "MANAGER") => setInviteRole(value)}>
+                    <SelectTrigger id="inviteRole">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AGENT">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Agent</div>
+                            <div className="text-xs text-muted-foreground">Can manage properties and bookings</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="MANAGER">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Manager</div>
+                            <div className="text-xs text-muted-foreground">Can manage properties, bookings, and view reports</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button type="button" variant="outline" onClick={addInvite} className="w-full">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Invite
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Pending Invites ({formData.invites.length})</Label>
+                <div className="space-y-2 min-h-[100px] max-h-[300px] overflow-y-auto">
+                  {formData.invites.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Users className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+                      <p className="text-sm text-muted-foreground">No invites yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Add team members to collaborate on properties</p>
+                    </div>
+                  ) : (
+                    formData.invites.map((invite) => (
+                      <div
+                        key={invite.id}
+                        className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{invite.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{invite.email}</p>
+                          </div>
+                          <Badge variant={invite.role === "MANAGER" ? "default" : "secondary"} className="flex-shrink-0">
+                            {invite.role === "MANAGER" ? "Manager" : "Agent"}
+                          </Badge>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeInvite(invite.id)}
+                          className="ml-3 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="ghost" type="button" onClick={prevStep}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Completing Setup..." : (
                   <>
                     Complete Setup <CheckCircle2 className="ml-2 h-4 w-4" />
                   </>

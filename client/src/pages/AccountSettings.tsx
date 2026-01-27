@@ -46,6 +46,7 @@ export default function AccountSettings() {
     name: profile?.agency?.name || "",
     logo: null as File | null,
     color: profile?.agency?.primaryColor || "#0f172a",
+    secondaryColor: profile?.agency?.secondaryColor || "#10b981",
     website: profile?.website || "",
     phone: profile?.agency?.phone || "",
     locations: profile?.agency?.locations || [],
@@ -74,6 +75,7 @@ export default function AccountSettings() {
       name: profile?.agency?.name ?? "",
       logo: null,
       color: profile?.agency?.primaryColor ?? "#0f172a",
+      secondaryColor: profile?.agency?.secondaryColor ?? "#10b981",
       website: profile?.agency?.website ?? "",
       phone: profile?.agency?.phone ?? "",
       locations: profile?.agency?.locations ?? [],
@@ -122,6 +124,7 @@ export default function AccountSettings() {
     updateProfile.mutate({
       agencyName: agencyData.name,
       color: agencyData.color,
+      secondaryColor: agencyData.secondaryColor,
       website: agencyData.website,
       agencyPhone: agencyData.phone,
       locations: agencyData.locations,
@@ -211,25 +214,53 @@ export default function AccountSettings() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="agencyColor">Brand Color</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0">
-                      <div
-                        className="h-12 w-12 rounded-lg border-2 border-border"
-                        style={{ backgroundColor: agencyData.color }}
-                      />
+                <div className="space-y-3">
+                  <Label>Brand Colors</Label>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Primary Color */}
+                    <div className="space-y-3">
+                      <Label htmlFor="agencyColor" className="text-sm font-medium">Primary</Label>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-14 w-14 rounded-lg border-2 border-border shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: agencyData.color }}
+                        />
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            id="agencyColor"
+                            type="color"
+                            value={agencyData.color}
+                            onChange={(e) => updateAgencyData("color", e.target.value)}
+                            className="h-10 cursor-pointer w-full"
+                          />
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {agencyData.color.toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 flex gap-2 items-center">
-                      <Palette className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="agencyColor"
-                        type="color"
-                        value={agencyData.color}
-                        onChange={(e) => updateAgencyData("color", e.target.value)}
-                        className="h-10 w-24 cursor-pointer"
-                      />
-                      <span className="text-sm text-muted-foreground">{agencyData.color}</span>
+                    
+                    {/* Secondary Color */}
+                    <div className="space-y-3">
+                      <Label htmlFor="agencySecondaryColor" className="text-sm font-medium">Secondary</Label>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-14 w-14 rounded-lg border-2 border-border shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: agencyData.secondaryColor }}
+                        />
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            id="agencySecondaryColor"
+                            type="color"
+                            value={agencyData.secondaryColor}
+                            onChange={(e) => updateAgencyData("secondaryColor", e.target.value)}
+                            className="h-10 cursor-pointer w-full"
+                          />
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {agencyData.secondaryColor.toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

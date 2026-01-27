@@ -22,9 +22,9 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, Home, ArrowLeft, X, Image as ImageIcon, Video, Grid3x3, MapPin } from "lucide-react";
-import { MediaManager } from "@/components/MediaManager";
+import { Plus, Building2, Home, ArrowLeft, X, MapPin } from "lucide-react";
 import { uploadToR2 } from "@/lib/utils";
+import { InlineMediaManager } from "@/components/InlineMediaManager";
 import {
   useCreateRentalProperty,
   useCreateSalesProperty,
@@ -86,7 +86,6 @@ export function AddPropertyDialog({
 }: AddPropertyDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"choose" | "rental" | "sale">(defaultType === "choose" ? "choose" : defaultType);
-  const [showMediaManager, setShowMediaManager] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -608,58 +607,11 @@ export function AddPropertyDialog({
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label>Media</Label>
-                  <div className="space-y-3">
-                    {media.length > 0 ? (
-                      <div className="grid grid-cols-4 gap-2">
-                        {media.map((item, index) => (
-                          <div key={index} className="relative group">
-                            <div className="aspect-square rounded-md overflow-hidden border">
-                              {item.type === "image" ? (
-                                <img 
-                                  src={item.url} 
-                                  alt={item.title}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <Video className="h-6 w-6 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => {
-                                setMedia(prev => prev.filter((_, i) => i !== index));
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 border-2 border-dashed rounded-md">
-                        <Grid3x3 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">No media added</p>
-                      </div>
-                    )}
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowMediaManager(true)}
-                      className="w-full"
-                      data-testid="button-manage-media"
-                    >
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Manage Media
-                    </Button>
-                  </div>
+                  <InlineMediaManager
+                    media={media}
+                    onMediaChange={setMedia}
+                    uploadToR2={uploadToR2}
+                  />
                 </div>
 
                 {/* Amenities Section */}
@@ -887,14 +839,6 @@ export function AddPropertyDialog({
           )}
         </DialogContent>
       </Dialog>
-
-      <MediaManager
-        open={showMediaManager}
-        onOpenChange={setShowMediaManager}
-        media={media}
-        onMediaChange={setMedia}
-        uploadToR2={uploadToR2}
-      />
     </>
   );
 }

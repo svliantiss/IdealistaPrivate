@@ -52,6 +52,7 @@ export const useUpdateProfile = () => {
             agencyName?: string;
             agencyEmail?: string;
             color?: string;
+            secondaryColor?: string;
             website?: string;
             agencyPhone?: string;
             locations?: string[];

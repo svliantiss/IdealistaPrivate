@@ -36,8 +36,8 @@ export const useVerifyOtp = () => {
 export const useUpdateBranding = () => {
   const agentId = useSelector((state: RootState) => state.auth.agent?.id);
   const dispatch = useDispatch();
-  return useMutation<{ agent: Agent }, Error, { agencyName: string; agencyColor: string; agencyLogo?: string }>({
-    mutationFn: (data: { agencyName: string; agencyColor: string; agencyLogo?: string }) =>
+  return useMutation<{ agent: Agent }, Error, { agencyName: string; agencyColor: string; agencySecondaryColor: string; agencyLogo?: string }>({
+    mutationFn: (data: { agencyName: string; agencyColor: string; agencySecondaryColor: string; agencyLogo?: string }) =>
       updateBranding({ agentId: agentId!, ...data }),
     onSuccess: (data) => {
       dispatch(setAgent(data.agent));

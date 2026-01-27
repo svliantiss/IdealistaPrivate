@@ -18,15 +18,17 @@ export const updateBranding = ({
     agentId,
     agencyName,
     agencyColor,
+    agencySecondaryColor,
 }: {
     agentId: number;
     agencyName: string;
     agencyColor: string;
+    agencySecondaryColor: string;
 }) =>
     api
         .post(
             '/api/onboarding/step3',
-            { agencyName, agencyColor },
+            { agencyName, agencyColor, agencySecondaryColor },
             { headers: getAuthHeader() } // <-- attach Bearer token
         )
         .then(res => res.data as { agent: Agent });

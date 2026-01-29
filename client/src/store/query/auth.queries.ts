@@ -4,6 +4,8 @@ import { useDispatch } from "react-redux";
 import { Agent, setAgent } from "../slices/authSlice";
 import { setLoading } from "../slices/uiSlice";
 
+import { useQuery } from '@tanstack/react-query';
+import { getAuthHeader, api } from "../api/baseApi";
 
 export const useRequestLoginOtp = () => useMutation<unknown, Error, { email: string }>({
     mutationFn: requestLoginOtp,
@@ -42,3 +44,18 @@ export const useVerifyLoginOtp = () => {
 
     });
 }
+// src/store/query/auth.queries.ts
+
+
+export const useCurrentAgent = () => {
+    return useQuery({
+        queryKey: ['current-agent'],
+        queryFn: async () => {
+            const response = await api.get('/api/auth/me',
+                { headers: getAuthHeader() }
+            );
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+};

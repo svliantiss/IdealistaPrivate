@@ -9,22 +9,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText, Loader2, Play, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { AgentContactDialog } from "@/components/AgentContactDialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   useRentalProperty,
   usePropertyAvailability,
-  // useCreateBooking
 } from "@/store/query/property.queries";
+import {
+  useCreatePropertyBooking,
+  calculateNights as calculateNightsUtil,
+  formatBookingDate
+} from "@/store/query/booking.queries";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useReactToPrint } from "react-to-print";
-import { RentalListing } from "./Public/RentalsProperties";
+import { RentalListingPDFDownload } from "./pdf/rental"
+import { useCurrentAgent } from "@/store/query/auth.queries";
 
 // Video Player Component
 const VideoPlayer = ({ src, title }: { src: string; title: string }) => {
@@ -50,7 +55,7 @@ const VideoPlayer = ({ src, title }: { src: string; title: string }) => {
         className="w-full h-full object-cover"
         controls
         preload="metadata"
-        poster="/video-poster.jpg" // Optional: Add a poster image
+        poster="/video-poster.jpg"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
@@ -103,7 +108,6 @@ const MediaSlider = ({ media }: { media: Array<{ url: string; type: string; titl
   };
 
   const currentMedia = media[currentIndex];
-  console.log('Current Media:', currentMedia);
 
   return (
     <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
@@ -216,22 +220,16 @@ export default function PropertyDetails() {
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  /** ✅ IMPORTANT: ref must exist BEFORE printing */
-  const printRef = useRef<HTMLDivElement>(null);
-
-  /** ✅ FIX: use contentRef (NOT content()) */
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `property-${propertyId}`,
-    removeAfterPrint: true,
-  });
-
   // Use TanStack Query hooks from your API
   const {
     data: propertyData,
     isLoading: propertyLoading,
     error: propertyError
   } = useRentalProperty(propertyId);
+
+  // Get current agent for booking
+  const { data: currentAgentData, isLoading: isLoadingAgent } = useCurrentAgent();
+  const currentAgent = currentAgentData?.data || currentAgentData;
 
   // Extract property from response
   const property = propertyData?.data || propertyData?.property || propertyData;
@@ -244,7 +242,12 @@ export default function PropertyDetails() {
   // Extract availability from response
   const availability = availabilityData?.data || availabilityData?.availability || availabilityData;
 
-  // const createBookingMutation = useCreateBooking();
+  // Get similar properties for PDF
+  const { data: similarPropertiesData = [] } = usePropertyAvailability(propertyId);
+  const similarProperties = similarPropertiesData?.data || similarPropertiesData?.properties || [];
+
+  // Use the new create booking mutation
+  const createBookingMutation = useCreatePropertyBooking();
 
   const bookedDates = useMemo(() => {
     const dates: Date[] = [];
@@ -380,7 +383,7 @@ export default function PropertyDetails() {
     setBookingDialogOpen(true);
   };
 
-  const handleSubmitBooking = () => {
+  const handleSubmitBooking = async () => {
     if (!clientName || !clientEmail || !clientPhone) {
       toast({
         title: "Missing Information",
@@ -389,10 +392,53 @@ export default function PropertyDetails() {
       });
       return;
     }
+
+    if (!property || !checkInDate || !checkOutDate) {
+      toast({
+        title: "Missing Information",
+        description: "Please select dates first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const bookingData = {
+        propertyId,
+        clientName,
+        clientEmail,
+        clientPhone,
+        checkIn: checkInDate.toISOString(),
+        checkOut: checkOutDate.toISOString(),
+        totalAmount: parseFloat(calculateTotal()),
+        additionNote: notes,
+        ownerAgentId: property.createdBy?.id || property.agency?.id || property.ownerAgentId,
+        bookingAgentId: currentAgent?.id,
+      };
+
+      await createBookingMutation.mutateAsync(bookingData);
+      
+      // Close dialog and reset form
+      setBookingDialogOpen(false);
+      setClientName("");
+      setClientEmail("");
+      setClientPhone("");
+      setNotes("");
+      setCheckInDate(null);
+      setCheckOutDate(null);
+      
+      // Refresh availability
+      refetchAvailability();
+      
+    } catch (error) {
+      // Error is already handled in mutation
+      console.error("Booking error:", error);
+    }
   };
 
   const handleSharePublicLink = () => {
-    const url = window.location.href;
+    const host = window.location.origin;
+    const url =  `${host}/general/rentals/${propertyId}`;
     if (navigator.share) {
       navigator.share({
         title: property?.title || 'Property Listing',
@@ -422,7 +468,7 @@ export default function PropertyDetails() {
     setShareDropdownOpen(false);
   };
 
-  /** ✅ FIX: small delay avoids ref timing race */
+  /** ✅ PDF Generation with @react-pdf/renderer */
   const handleDownloadPDF = () => {
     if (!property) {
       toast({
@@ -440,18 +486,20 @@ export default function PropertyDetails() {
       title: "Generating PDF...",
       description: "Please wait while we prepare your document.",
     });
-
-    setTimeout(() => {
-      handlePrint();
-      setIsGeneratingPDF(false);
-      toast({
-        title: "PDF downloaded!",
-        description: "Property details have been saved as PDF.",
-      });
-    }, 100);
   };
 
-  if (propertyLoading) {
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!bookingDialogOpen) {
+      // Keep dates but reset client info
+      setClientName("");
+      setClientEmail("");
+      setClientPhone("");
+      setNotes("");
+    }
+  }, [bookingDialogOpen]);
+
+  if (propertyLoading || isLoadingAgent) {
     return (
       <Layout>
         <div className="p-8">
@@ -562,24 +610,10 @@ export default function PropertyDetails() {
   };
 
   const mediaItems = getMediaItems();
+  const agencyColor = property.agency?.primaryColor || '#3b82f6';
 
   return (
     <Layout>
-      {/* ================= PRINTABLE CONTENT (MUST BE MOUNTED) ================= */}
-      <div
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: 0,
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-      >
-        <div ref={printRef}>
-          <RentalListing prop_id={property.id} />
-        </div>
-      </div>
-
       <div className="p-8 space-y-6">
         <div className="flex items-center gap-4 mb-6">
           <Link href="/properties">
@@ -621,10 +655,19 @@ export default function PropertyDetails() {
                       <span>Generating PDF...</span>
                     </>
                   ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>Download PDF</span>
-                    </>
+                    <RentalListingPDFDownload
+                      property={property}
+                      similarProperties={similarProperties}
+                      agencyColor={agencyColor}
+                      onClick={() => {
+                        setShareDropdownOpen(false);
+                        setIsGeneratingPDF(true);
+                        toast({
+                          title: "Generating PDF...",
+                          description: "Please wait while we prepare your document.",
+                        });
+                      }}
+                    />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -1063,10 +1106,15 @@ export default function PropertyDetails() {
               <Button
                 className="flex-1 bg-primary text-white"
                 onClick={handleSubmitBooking}
-                // disabled={createBookingMutation.isPending}
+                disabled={createBookingMutation.isPending}
                 data-testid="button-confirm-booking"
               >
-                {false ? "Creating..." : "Confirm Booking"}
+                {createBookingMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : "Confirm Booking"}
               </Button>
             </div>
           </div>

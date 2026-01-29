@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SalesListing } from "./Public/SalesProperties";
 import { Textarea } from "@/components/ui/textarea";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, MapPin, Bed, Bath, Maximize2, Calendar, Share2, Heart, Check, User, Mail, Phone, FileText, Euro, Building2, Home, Tag, Layers, CalendarDays, Clock, Play, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -20,7 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useReactToPrint } from "react-to-print";
+
+// Import the Sales PDF Components
+import { SalesListingPDFDownload } from "./pdf/sales";
 
 // Video Player Component
 const VideoPlayer = ({ src, title }: { src: string; title: string }) => {
@@ -149,8 +150,8 @@ const MediaSlider = ({ media }: { media: Array<{ url: string; type: string; titl
               key={index}
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-all ${index === currentIndex
-                  ? 'bg-secondary w-6'
-                  : 'bg-white/60 hover:bg-white'
+                ? 'bg-secondary w-6'
+                : 'bg-white/60 hover:bg-white'
                 }`}
               aria-label={`Go to slide ${index + 1}`}
             />
@@ -166,8 +167,8 @@ const MediaSlider = ({ media }: { media: Array<{ url: string; type: string; titl
               key={index}
               onClick={() => goToSlide(index)}
               className={`w-16 h-12 rounded overflow-hidden border-2 transition-all ${index === currentIndex
-                  ? 'border-secondary'
-                  : 'border-transparent hover:border-white/50'
+                ? 'border-secondary'
+                : 'border-transparent hover:border-white/50'
                 }`}
             >
               {item.type === 'video' ? (
@@ -210,16 +211,6 @@ export default function SalesPropertyDetails() {
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  /** IMPORTANT: ref must exist BEFORE printing */
-  const printRef = useRef<HTMLDivElement>(null);
-
-  /** FIX: use contentRef (NOT content()) */
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `sales-property-${propertyId}`,
-    removeAfterPrint: true,
-  });
-
   // Use TanStack Query hook for sales property
   const {
     data: propertyData,
@@ -257,7 +248,7 @@ export default function SalesPropertyDetails() {
   };
 
   const handleSharePublicLink = () => {
-    const url = window.location.href;
+    const url = window.location.origin + `/general/sales/${property?.id}`;
     if (navigator.share) {
       navigator.share({
         title: property?.title || 'Property Listing',
@@ -286,33 +277,21 @@ export default function SalesPropertyDetails() {
     setShareDropdownOpen(false);
   };
 
-  /** FIX: small delay avoids ref timing race */
-  const handleDownloadPDF = () => {
-    if (!property) {
-      toast({
-        title: "Error",
-        description: "Property not loaded",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setShareDropdownOpen(false);
+  const handlePDFDownloadStart = () => {
     setIsGeneratingPDF(true);
-
     toast({
       title: "Generating PDF...",
       description: "Please wait while we prepare your document.",
     });
+  };
 
-    setTimeout(() => {
-      handlePrint();
-      setIsGeneratingPDF(false);
-      toast({
-        title: "PDF downloaded!",
-        description: "Property details have been saved as PDF.",
-      });
-    }, 100);
+  const handlePDFDownloadSuccess = (url: string) => {
+    setIsGeneratingPDF(false);
+    toast({
+      title: "PDF downloaded!",
+      description: "Property details have been saved as PDF.",
+    });
+    setShareDropdownOpen(false);
   };
 
   if (propertyLoading) {
@@ -445,25 +424,50 @@ export default function SalesPropertyDetails() {
     return icons[type] || <Home className="h-4 w-4" />;
   };
 
+  // Prepare property data for PDF
+  const preparePropertyForPDF = () => {
+    // Calculate mortgage information
+    const price = typeof property.price === 'string' ? parseFloat(property.price) : property.price || 0;
+    const downPayment = Math.round(price * 0.2);
+    const loanAmount = price - downPayment;
+    const monthlyPayment = Math.round((loanAmount * 0.035) / 12); // 3.5% annual rate
+
+    return {
+      ...property,
+      price,
+      pricePerSqm: calculatePricePerSqm().replace('€', '').replace('/m²', ''),
+      mortgage: {
+        downPayment,
+        loanAmount,
+        monthlyPayment
+      },
+      // Ensure amenities is an array
+      amenities: Array.isArray(property.amenities) ? property.amenities : [],
+      // Ensure nearestTo is an array
+      nearestTo: Array.isArray(property.nearestTo) ? property.nearestTo : [],
+      // Ensure agency has required structure
+      agency: property.agency || {
+        name: property.createdBy?.agency || 'Unknown Agency',
+        logo: property.agencyLogo || property.logo,
+        phone: property.agencyPhone || property.phone,
+        email: property.agencyEmail || property.email,
+        website: property.agencyWebsite || property.website
+      },
+      // Ensure agent exists
+      agent: property.createdBy || property.agent || {
+        name: 'Agent',
+        email: property.agency?.email,
+        phone: property.agency?.phone
+      }
+    };
+  };
+
   const mediaItems = getMediaItems();
+  const pdfProperty = preparePropertyForPDF();
+  const agencyColor = property.agency?.primaryColor || '#10b981';
 
   return (
     <Layout>
-      {/* ================= PRINTABLE CONTENT (MUST BE MOUNTED) ================= */}
-      <div
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: 0,
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-      >
-        <div ref={printRef}>
-          <SalesListing prop_id={property.id} />
-        </div>
-      </div>
-
       <div className="p-8 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -510,21 +514,24 @@ export default function SalesPropertyDetails() {
                   <Share2 className="mr-2 h-4 w-4" />
                   <span>Share Public Link</span>
                 </DropdownMenuItem>
+                {/* PDF Download using SalesListingPDFDownload component - INTEGRATED LIKE RENTAL */}
                 <DropdownMenuItem
-                  onClick={handleDownloadPDF}
-                  className="cursor-pointer"
                   disabled={isGeneratingPDF}
+                  className="cursor-pointer"
+
                 >
                   {isGeneratingPDF ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Generating PDF...</span>
+                      <span className="">Generating PDF...</span>
                     </>
                   ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>Download PDF</span>
-                    </>
+                    <SalesListingPDFDownload
+                      property={pdfProperty}
+                      agencyColor={agencyColor}
+                      onDownloadSuccess={handlePDFDownloadSuccess}
+                      onClick={handlePDFDownloadStart}
+                    />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,205 +6,223 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Calendar, 
-  MapPin, 
-  User, 
-  Building2, 
-  Phone, 
-  Mail, 
-  Euro, 
-  Check, 
+import {
+  Calendar,
+  MapPin,
+  User,
+  Building2,
+  Phone,
+  Mail,
+  Euro,
+  Check,
   X,
   Filter,
   CalendarDays,
   ClipboardList,
   Inbox,
-  Archive
+  Archive,
+  Loader2
 } from "lucide-react";
 import { Link } from "wouter";
 
-const CURRENT_AGENT_ID = 1;
+// Import TanStack Query booking hooks
+import {
+  useBookings,
+  useUpdateBookingStatus,
+  useRequestCancellation,
+  getBookingStatusClass,
+  getBookingStatusLabel,
+  formatBookingDate,
+  calculateNights as calculateNightsUtil,
+  type Booking,
+  type BookingFilters
+} from "@/store/query/booking.queries";
+
+// Import property queries
+import { useRentalProperties } from "@/store/query/property.queries";
+import { useCurrentAgent } from "@/store/query/auth.queries";
 
 export default function Bookings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
-  const { data: currentAgent, isLoading: isLoadingAgent } = useQuery<any>({
-    queryKey: [`/api/agents/${CURRENT_AGENT_ID}`],
-    queryFn: async () => {
-      const response = await fetch(`/api/agents/${CURRENT_AGENT_ID}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
-  });
+  // Use TanStack Query hooks
+  const { data: currentAgentData, isLoading: isLoadingAgent } = useCurrentAgent();
+  console.log({ currentAgentData: currentAgentData?.user?.agentId });
+  const currentAgent = currentAgentData?.user?.agentId 
 
-  const { data: bookings = [], isLoading: isLoadingBookings } = useQuery<any[]>({
-    queryKey: ['/api/bookings'],
-    queryFn: async () => {
-      const response = await fetch('/api/bookings');
-      if (!response.ok) return [];
-      return response.json();
-    },
-  });
 
-  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<any[]>({
-    queryKey: ['/api/agents'],
-    queryFn: async () => {
-      const response = await fetch('/api/agents');
-      if (!response.ok) return [];
-      return response.json();
-    },
-  });
 
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<any[]>({
-    queryKey: ['/api/properties'],
-    queryFn: async () => {
-      const response = await fetch('/api/properties');
-      if (!response.ok) return [];
-      return response.json();
-    },
-  });
+  // Build filters for bookings query
+  const bookingFilters: BookingFilters = {
+    status: statusFilter !== "all" ? statusFilter as any : undefined,
+    startDate: dateFrom || undefined,
+    endDate: dateTo || undefined,
+  };
 
-  const isLoading = isLoadingAgent || isLoadingBookings || isLoadingAgents || isLoadingProperties;
+  const {
+    data: bookingsData,
+    isLoading: isLoadingBookings,
+    error: bookingsError
+  } = useBookings(bookingFilters);
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
-      const response = await fetch(`/api/bookings/${bookingId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+  const {
+    data: propertiesData,
+    isLoading: isLoadingProperties,
+    error: propertiesError
+  } = useRentalProperties();
+
+  // Use the booking mutations
+  const updateStatusMutation = useUpdateBookingStatus();
+  const requestCancellationMutation = useRequestCancellation();
+
+  const isLoading = isLoadingAgent || isLoadingBookings || isLoadingProperties;
+  const hasError = bookingsError || propertiesError;
+
+  // FIXED: Extract data from responses based on actual API structure
+  // FIXED: Extract data from responses based on actual API structure
+  const bookings: Booking[] = Array.isArray(bookingsData?.bookings)
+    ? bookingsData.bookings
+    : [];
+
+  console.log({ currentAgent });
+  console.log({ bookingsData, bookings });
+
+  // Extract current agent properlyconst currentAgent = currentAgentData?.data?.agent || currentAgentData?.agent || currentAgentData?.data || currentAgentData;
+
+  // Extract properties properly
+  const properties = Array.isArray(propertiesData?.data?.properties)
+    ? propertiesData.data.properties
+    : Array.isArray(propertiesData?.data)
+      ? propertiesData.data
+      : Array.isArray(propertiesData?.properties)
+        ? propertiesData.properties
+        : Array.isArray(propertiesData)
+          ? propertiesData
+          : [];
+  // Extract agents from bookings (fallback solution)
+  const [agents, setAgents] = useState<any[]>([]);
+  useEffect(() => {
+    if (Array.isArray(bookings) && bookings.length > 0) {
+      // Extract unique agents from bookings
+      const extractedAgents: any[] = [];
+      const seenAgentIds = new Set<number>();
+
+      bookings.forEach((booking: Booking) => {
+        // Add booking agent if exists and not already seen
+        if (booking.bookingAgent && !seenAgentIds.has(booking.bookingAgent.id)) {
+          extractedAgents.push(booking.bookingAgent);
+          seenAgentIds.add(booking.bookingAgent.id);
+        }
+
+        // Add owner agent if exists and not already seen
+        if (booking.ownerAgent && !seenAgentIds.has(booking.ownerAgent.id)) {
+          extractedAgents.push(booking.ownerAgent);
+          seenAgentIds.add(booking.ownerAgent.id);
+        }
       });
-      if (!response.ok) throw new Error('Failed to update status');
-      return response.json();
-    },
-    onSuccess: (_, { status }) => {
-      const messages: Record<string, { title: string; description: string }> = {
-        confirmed: { title: 'Booking Approved', description: 'The booking has been approved and dates are now blocked.' },
-        cancelled: { title: 'Booking Cancelled', description: 'The booking has been cancelled and dates are now available.' },
-      };
-      const message = messages[status] || { title: 'Status Updated', description: 'The booking status has been updated.' };
-      toast(message);
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/property-availability'] });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update booking status.',
-        variant: 'destructive',
-      });
-    },
-  });
 
-  const requestCancellationMutation = useMutation({
-    mutationFn: async (bookingId: number) => {
-      const response = await fetch(`/api/bookings/${bookingId}/request-cancellation`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!response.ok) throw new Error('Failed to request cancellation');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Cancellation Requested',
-        description: 'Your cancellation request has been sent to the property owner.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to request cancellation.',
-        variant: 'destructive',
-      });
-    },
-  });
+      setAgents(extractedAgents);
+    }
+  }, [bookings]);
 
-  const getAgent = (agentId: number) => agents.find((a: any) => a.id === agentId);
-  const getProperty = (propertyId: number) => properties.find((p: any) => p.id === propertyId);
+  // FIXED: Filtering functions with array checks
+  const filterMyBookings = (bookingsToFilter: Booking[]): Booking[] => {
+    if (!currentAgent || !Array.isArray(bookingsToFilter)) return [];
 
-  const agencyAgentIds = agents
-    .filter((a: any) => a.agency === currentAgent?.agency)
-    .map((a: any) => a.id);
+    // Get bookings where current agent is the booking agent
+    return bookingsToFilter.filter((booking: Booking) => {
+      console.log({ booking: booking.bookingAgentId, currentAgent: currentAgent.id });
+      return booking.bookingAgentId === currentAgentData?.user?.agentId 
+    });
+  };
 
-  // My Bookings: bookings made by me or my agency employees
-  const myBookings = bookings.filter((booking: any) => 
-    agencyAgentIds.includes(booking.bookingAgentId)
+  const filterBookingRequests = (bookingsToFilter: Booking[]): Booking[] => {
+    if (!currentAgent || !Array.isArray(bookingsToFilter)) return [];
+
+    // Get bookings where:
+    // 1. Status is pending or cancellation_requested
+    // 2. Property belongs to current agent (owner agent)
+    // 3. Booking agent is not the current agent
+    return bookingsToFilter.filter((booking: Booking) => {
+      if (!['pending', 'cancellation_requested'].includes(booking.status)) return false;
+
+      const isMyProperty = booking.ownerAgentId === currentAgent.id;
+      if (!isMyProperty) return false;
+
+      const isMyBooking = booking.bookingAgentId === currentAgent.id;
+      return !isMyBooking;
+    });
+  };
+
+  // Split my bookings into active and archived
+  const myBookings = filterMyBookings(bookings);
+  const bookingRequests = filterBookingRequests(bookings);
+
+  const activeMyBookings = myBookings.filter((booking: Booking) =>
+    booking.status !== 'archived' && booking.status !== 'cancelled'
+  );
+  const archivedMyBookings = myBookings.filter((booking: Booking) =>
+    booking.status === 'archived' || booking.status === 'cancelled'
   );
 
-  // Helper to get date-only string (YYYY-MM-DD) for timezone-agnostic comparison
+  // Apply additional client-side filters to active bookings
+  const filteredMyBookings = activeMyBookings.filter((booking: Booking) => {
+    if (dateFrom) {
+      const bookingCheckIn = getDateString(booking.checkIn);
+      if (bookingCheckIn < dateFrom) return false;
+    }
+
+    if (dateTo) {
+      const bookingCheckOut = getDateString(booking.checkOut);
+      if (bookingCheckOut > dateTo) return false;
+    }
+
+    return true;
+  });
+
+  const getAgent = (agentId: number) => {
+    // First try to find agent in extracted agents list
+    const foundAgent = agents.find((a: any) => a.id === agentId);
+    if (foundAgent) return foundAgent;
+
+    // If not found, check if it's the current agent
+    if (currentAgent && currentAgent.id === agentId) return currentAgent;
+
+    // Return a fallback agent object
+    return {
+      id: agentId,
+      name: 'Unknown Agent',
+      email: 'unknown@example.com',
+      agency: { name: 'Unknown Agency' }
+    };
+  };
+
+  const getProperty = (propertyId: number) =>
+    properties.find((p: any) => p.id === propertyId);
+
+  const calculateNights = (checkIn: string, checkOut: string) => {
+    return calculateNightsUtil(checkIn, checkOut);
+  };
+
+  const formatDate = (dateString: string) => {
+    return formatBookingDate(dateString);
+  };
+
+  // Helper to get date-only string
   const getDateString = (dateStr: string | Date) => {
-    // For date input values (YYYY-MM-DD format), use directly
     if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return dateStr;
     }
-    // For ISO timestamps, extract the date portion
     const isoStr = new Date(dateStr).toISOString();
     return isoStr.split('T')[0];
   };
 
-  // Split my bookings into active and archived (archived includes both archived and cancelled)
-  const activeMyBookings = myBookings.filter((booking: any) => 
-    booking.status !== 'archived' && booking.status !== 'cancelled'
-  );
-  const archivedMyBookings = myBookings.filter((booking: any) => 
-    booking.status === 'archived' || booking.status === 'cancelled'
-  );
-
-  // Apply filters to active bookings
-  const filteredMyBookings = activeMyBookings.filter((booking: any) => {
-    if (statusFilter !== "all" && booking.status !== statusFilter) return false;
-    
-    if (dateFrom) {
-      const bookingCheckIn = getDateString(booking.checkIn);
-      // Check-in should be on or after the from date
-      if (bookingCheckIn < dateFrom) return false;
-    }
-    
-    if (dateTo) {
-      const bookingCheckOut = getDateString(booking.checkOut);
-      // Check-out should be on or before the to date
-      if (bookingCheckOut > dateTo) return false;
-    }
-    
-    return true;
-  });
-
-  // Booking Requests: pending bookings and cancellation requests from other agencies for my properties
-  const bookingRequests = bookings.filter((booking: any) => {
-    if (booking.status !== 'pending' && booking.status !== 'cancellation_requested') return false;
-    const isMyAgencyProperty = agencyAgentIds.includes(booking.ownerAgentId);
-    if (!isMyAgencyProperty) return false;
-    const bookingAgent = agents.find((a: any) => a.id === booking.bookingAgentId);
-    const isDifferentAgency = bookingAgent?.agency !== currentAgent?.agency;
-    return isDifferentAgency;
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const calculateNights = (checkIn: string, checkOut: string) => {
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const handleEmailOwner = (booking: any) => {
+  const handleEmailOwner = (booking: Booking) => {
     const ownerAgent = getAgent(booking.ownerAgentId);
     const property = getProperty(booking.propertyId);
     if (ownerAgent?.email) {
@@ -214,23 +232,12 @@ export default function Bookings() {
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'paid': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'cancellation_requested': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'cancelled': return 'bg-red-50 text-red-700 border-red-200';
-      case 'archived': return 'bg-slate-100 text-slate-600 border-slate-300';
-      default: return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
+  const handleUpdateStatus = (bookingId: number, status: string) => {
+    updateStatusMutation.mutate({ id: bookingId, status });
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'cancellation_requested': return 'Cancel Requested';
-      default: return status;
-    }
+  const handleRequestCancellation = (bookingId: number) => {
+    requestCancellationMutation.mutate(bookingId);
   };
 
   const clearFilters = () => {
@@ -243,7 +250,31 @@ export default function Bookings() {
     return (
       <Layout>
         <div className="p-8">
-          <div className="text-center py-12">Loading bookings...</div>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+            <span>Loading bookings...</span>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <Layout>
+        <div className="p-8">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2 text-red-600">Error Loading Bookings</h2>
+            <p className="text-muted-foreground mb-4">
+              {bookingsError?.message || propertiesError?.message || 'Failed to load bookings data.'}
+            </p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Try Again
+            </Button>
+          </div>
         </div>
       </Layout>
     );
@@ -300,7 +331,7 @@ export default function Bookings() {
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Filters:</span>
                   </div>
-                  
+
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]" data-testid="filter-status">
                       <SelectValue placeholder="Status" />
@@ -352,7 +383,7 @@ export default function Bookings() {
                   <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Bookings Found</h3>
                   <p className="text-muted-foreground">
-                    {statusFilter !== "all" || dateFrom || dateTo 
+                    {statusFilter !== "all" || dateFrom || dateTo
                       ? "No bookings match your current filters."
                       : "You haven't made any bookings yet."}
                   </p>
@@ -360,7 +391,7 @@ export default function Bookings() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {filteredMyBookings.map((booking: any) => {
+                {filteredMyBookings.map((booking: Booking) => {
                   const property = getProperty(booking.propertyId);
                   const ownerAgent = getAgent(booking.ownerAgentId);
                   const nights = calculateNights(booking.checkIn, booking.checkOut);
@@ -383,8 +414,8 @@ export default function Bookings() {
                                 <span>{property?.location || 'Unknown'}</span>
                               </div>
                             </div>
-                            <Badge variant="outline" className={getStatusBadgeClass(booking.status)}>
-                              {getStatusLabel(booking.status)}
+                            <Badge variant="outline" className={getBookingStatusClass(booking.status)}>
+                              {getBookingStatusLabel(booking.status)}
                             </Badge>
                           </div>
                         </div>
@@ -405,7 +436,7 @@ export default function Bookings() {
                             <span className="text-muted-foreground">{nights} nights</span>
                             <span className="font-semibold text-primary flex items-center">
                               <Euro className="h-3 w-3 mr-0.5" />
-                              {parseFloat(booking.totalAmount).toFixed(2)}
+                              {parseFloat(booking.totalAmount.toString()).toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -427,12 +458,12 @@ export default function Bookings() {
                             </div>
                             <div>
                               <p className="text-xs font-medium">{ownerAgent?.name}</p>
-                              <p className="text-xs text-muted-foreground">{ownerAgent?.agency}</p>
+                              <p className="text-xs text-muted-foreground">{ownerAgent?.agency?.name || ownerAgent?.agency}</p>
                             </div>
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="w-full"
                             onClick={() => handleEmailOwner(booking)}
                             data-testid={`button-email-${booking.id}`}
@@ -442,32 +473,40 @@ export default function Bookings() {
                           </Button>
                           {booking.status !== 'cancelled' && booking.status !== 'cancellation_requested' && (
                             (() => {
-                              const isSameAgencyProperty = ownerAgent?.agency === currentAgent?.agency;
-                              if (isSameAgencyProperty) {
+                              const isMyProperty = booking.ownerAgentId === currentAgent?.id;
+                              if (isMyProperty) {
                                 return (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
                                     className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                                    onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                    onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
                                     disabled={updateStatusMutation.isPending}
                                     data-testid={`button-cancel-${booking.id}`}
                                   >
-                                    <X className="h-3 w-3 mr-2" />
+                                    {updateStatusMutation.isPending ? (
+                                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                    ) : (
+                                      <X className="h-3 w-3 mr-2" />
+                                    )}
                                     Cancel Booking
                                   </Button>
                                 );
                               } else {
                                 return (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
                                     className="w-full border-amber-200 text-amber-600 hover:bg-amber-50 h-auto py-2 whitespace-normal text-xs"
-                                    onClick={() => requestCancellationMutation.mutate(booking.id)}
+                                    onClick={() => handleRequestCancellation(booking.id)}
                                     disabled={requestCancellationMutation.isPending}
                                     data-testid={`button-request-cancel-${booking.id}`}
                                   >
-                                    <X className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    {requestCancellationMutation.isPending ? (
+                                      <Loader2 className="h-3 w-3 mr-1 flex-shrink-0 animate-spin" />
+                                    ) : (
+                                      <X className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    )}
                                     Request Cancellation
                                   </Button>
                                 );
@@ -496,20 +535,20 @@ export default function Bookings() {
                   <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
                   <p className="text-muted-foreground">
-                    You don't have any booking requests from other agencies at the moment.
+                    You don't have any booking requests from other agents at the moment.
                   </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {bookingRequests.map((booking: any) => {
+                {bookingRequests.map((booking: Booking) => {
                   const property = getProperty(booking.propertyId);
                   const bookingAgent = getAgent(booking.bookingAgentId);
                   const nights = calculateNights(booking.checkIn, booking.checkOut);
 
                   return (
-                    <Card 
-                      key={booking.id} 
+                    <Card
+                      key={booking.id}
                       className={`overflow-hidden ${booking.status === 'cancellation_requested' ? 'border-orange-200 bg-orange-50/30' : 'border-amber-200 bg-amber-50/30'}`}
                       data-testid={`request-card-${booking.id}`}
                     >
@@ -528,11 +567,11 @@ export default function Bookings() {
                                 <span>{property?.location || 'Unknown location'}</span>
                               </div>
                             </div>
-                            <Badge className={booking.status === 'cancellation_requested' 
-                              ? 'bg-orange-100 text-orange-700 border-orange-200' 
+                            <Badge className={booking.status === 'cancellation_requested'
+                              ? 'bg-orange-100 text-orange-700 border-orange-200'
                               : 'bg-amber-100 text-amber-700 border-amber-200'
                             }>
-                              {booking.status === 'cancellation_requested' ? 'Cancel Requested' : 'Pending Approval'}
+                              {getBookingStatusLabel(booking.status)}
                             </Badge>
                           </div>
 
@@ -554,7 +593,7 @@ export default function Bookings() {
                             </div>
                             <div className="flex items-center gap-1 font-semibold text-primary">
                               <Euro className="h-4 w-4" />
-                              <span>{parseFloat(booking.totalAmount).toFixed(2)}</span>
+                              <span>{parseFloat(booking.totalAmount.toString()).toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
@@ -573,8 +612,13 @@ export default function Bookings() {
                             </div>
                             <div className="flex items-center text-sm text-muted-foreground">
                               <Phone className="h-3 w-3 mr-2" />
-                              {booking.clientPhone}
+                              {booking.clientPhone || 'No phone provided'}
                             </div>
+                            {booking.additionNote && (
+                              <div className="mt-2 pt-2 border-t">
+                                <p className="text-xs text-muted-foreground">Notes: {booking.additionNote}</p>
+                              </div>
+                            )}
                           </div>
 
                           <div className="pt-3 border-t">
@@ -588,7 +632,7 @@ export default function Bookings() {
                               </div>
                               <div>
                                 <p className="text-sm font-medium">{bookingAgent?.name || 'Unknown'}</p>
-                                <p className="text-xs text-muted-foreground">{bookingAgent?.agency}</p>
+                                <p className="text-xs text-muted-foreground">{bookingAgent?.agency?.name || bookingAgent?.agency}</p>
                               </div>
                             </div>
                           </div>
@@ -598,45 +642,61 @@ export default function Bookings() {
                         <div className="space-y-3 flex flex-col justify-center">
                           {booking.status === 'pending' ? (
                             <>
-                              <Button 
+                              <Button
                                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'confirmed' })}
+                                onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
                                 disabled={updateStatusMutation.isPending}
                                 data-testid={`button-approve-${booking.id}`}
                               >
-                                <Check className="mr-2 h-4 w-4" />
+                                {updateStatusMutation.isPending ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="mr-2 h-4 w-4" />
+                                )}
                                 Approve Booking
                               </Button>
-                              <Button 
+                              <Button
                                 variant="outline"
                                 className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
                                 disabled={updateStatusMutation.isPending}
                                 data-testid={`button-decline-${booking.id}`}
                               >
-                                <X className="mr-2 h-4 w-4" />
+                                {updateStatusMutation.isPending ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <X className="mr-2 h-4 w-4" />
+                                )}
                                 Decline
                               </Button>
                             </>
                           ) : (
                             <>
-                              <Button 
+                              <Button
                                 className="w-full bg-red-600 hover:bg-red-700 text-white"
-                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                                onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
                                 disabled={updateStatusMutation.isPending}
                                 data-testid={`button-approve-cancel-${booking.id}`}
                               >
-                                <Check className="mr-2 h-4 w-4" />
+                                {updateStatusMutation.isPending ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="mr-2 h-4 w-4" />
+                                )}
                                 Approve Cancellation
                               </Button>
-                              <Button 
+                              <Button
                                 variant="outline"
                                 className="w-full border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                                onClick={() => updateStatusMutation.mutate({ bookingId: booking.id, status: 'confirmed' })}
+                                onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
                                 disabled={updateStatusMutation.isPending}
                                 data-testid={`button-deny-cancel-${booking.id}`}
                               >
-                                <X className="mr-2 h-4 w-4" />
+                                {updateStatusMutation.isPending ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <X className="mr-2 h-4 w-4" />
+                                )}
                                 Deny Cancellation
                               </Button>
                             </>
@@ -664,7 +724,7 @@ export default function Bookings() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {archivedMyBookings.map((booking: any) => {
+                {archivedMyBookings.map((booking: Booking) => {
                   const property = getProperty(booking.propertyId);
                   const ownerAgent = getAgent(booking.ownerAgentId);
                   const nights = calculateNights(booking.checkIn, booking.checkOut);
@@ -687,7 +747,7 @@ export default function Bookings() {
                                 <span>{property?.location || 'Unknown'}</span>
                               </div>
                             </div>
-                            <Badge variant="outline" className={getStatusBadgeClass(booking.status)}>
+                            <Badge variant="outline" className={getBookingStatusClass(booking.status)}>
                               {booking.status === 'cancelled' ? 'Cancelled' : 'Archived'}
                             </Badge>
                           </div>
@@ -709,7 +769,7 @@ export default function Bookings() {
                             <span className="text-muted-foreground">{nights} nights</span>
                             <span className="font-semibold text-primary flex items-center">
                               <Euro className="h-3 w-3 mr-0.5" />
-                              {parseFloat(booking.totalAmount).toFixed(2)}
+                              {parseFloat(booking.totalAmount.toString()).toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -731,14 +791,14 @@ export default function Bookings() {
                             </div>
                             <div>
                               <p className="text-xs font-medium">{ownerAgent?.name}</p>
-                              <p className="text-xs text-muted-foreground">{ownerAgent?.agency}</p>
+                              <p className="text-xs text-muted-foreground">{ownerAgent?.agency?.name || ownerAgent?.agency}</p>
                             </div>
                           </div>
                         </div>
                       </div>
                     </Card>
                   );
-                })}
+                })}a
               </div>
             )}
           </TabsContent>

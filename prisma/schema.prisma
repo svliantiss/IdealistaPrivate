@@ -143,13 +143,15 @@ model Booking {
   ownerAgentId   Int @map("owner_agent_id")
   bookingAgentId Int @map("booking_agent_id")
 
-  clientName  String
-  clientEmail String
-  clientPhone String?
-  checkIn     DateTime
-  checkOut    DateTime
-  totalAmount Decimal       @db.Decimal(10, 2)
-  status      BookingStatus @default(pending)
+  clientName   String
+  clientEmail  String?
+  clientPhone  String?
+  additionNote String?
+  checkIn      DateTime
+  checkOut     DateTime
+  duration     String
+  totalAmount  Decimal       @db.Decimal(10, 2)
+  status       BookingStatus @default(pending)
 
   createdAt DateTime @default(now()) @map("created_at")
 
